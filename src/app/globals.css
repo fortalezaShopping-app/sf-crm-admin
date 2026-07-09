@@ -37,7 +37,9 @@ body {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -369,6 +371,17 @@ a {
   padding: 10px 12px;
 }
 
+.form-success {
+  margin: 0;
+  border: 1px solid rgba(30, 122, 69, 0.24);
+  border-radius: 8px;
+  background: rgba(30, 122, 69, 0.08);
+  color: var(--success);
+  font-size: 13px;
+  line-height: 18px;
+  padding: 10px 12px;
+}
+
 .security-note {
   display: flex;
   align-items: flex-start;
@@ -567,6 +580,16 @@ a {
   padding: 0 12px;
 }
 
+.status-pill--danger {
+  border-color: rgba(180, 35, 24, 0.24);
+  background: rgba(180, 35, 24, 0.08);
+  color: var(--error);
+}
+
+.status-pill--danger .status-dot {
+  background: var(--error);
+}
+
 .status-dot {
   width: 7px;
   height: 7px;
@@ -638,6 +661,13 @@ a {
   gap: 16px;
 }
 
+.management-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
+  gap: 16px;
+  align-items: start;
+}
+
 .panel {
   min-width: 0;
   overflow: hidden;
@@ -664,6 +694,76 @@ a {
   color: var(--primary);
   font-size: 12px;
   font-weight: 800;
+}
+
+.count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  min-height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--cream);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 850;
+  padding: 0 10px;
+}
+
+.admin-form {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.admin-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 18px;
+}
+
+.admin-form input,
+.admin-form select,
+.admin-form textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: 0;
+  background: var(--cream);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 20px;
+  padding: 11px 12px;
+}
+
+.admin-form textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.admin-form input:focus,
+.admin-form select:focus,
+.admin-form textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(139, 50, 31, 0.12);
+}
+
+.helper-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.helper-panel p {
+  margin: 0;
+  color: var(--muted-text);
+  font-size: 14px;
+  line-height: 22px;
 }
 
 .admin-table {
@@ -714,6 +814,76 @@ a {
   line-height: 16px;
 }
 
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.table-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 16px;
+  padding: 0 9px;
+}
+
+.table-action:hover {
+  border-color: rgba(139, 50, 31, 0.35);
+  background: var(--primary-muted);
+}
+
+.table-action:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.table-action--danger {
+  color: var(--error);
+}
+
+.table-action--danger:hover {
+  border-color: rgba(180, 35, 24, 0.28);
+  background: rgba(180, 35, 24, 0.08);
+}
+
+.table-select {
+  min-width: 70px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: 0;
+  background: var(--cream);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 18px;
+  padding: 7px 9px;
+}
+
+.table-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(139, 50, 31, 0.12);
+}
+
+.table-json {
+  display: block;
+  max-width: 360px;
+  overflow: hidden;
+  color: var(--muted-text);
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .badge {
   display: inline-flex;
   min-height: 26px;
@@ -738,6 +908,10 @@ a {
   display: grid;
   gap: 10px;
   padding: 14px;
+}
+
+.quick-list--compact {
+  padding: 0;
 }
 
 .quick-action {
@@ -778,12 +952,33 @@ a {
   line-height: 16px;
 }
 
+.integration-step {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--cream);
+  color: var(--primary);
+  font-size: 13px;
+  line-height: 18px;
+  padding: 12px;
+}
+
+.integration-step svg {
+  flex: 0 0 auto;
+}
+
 @media (max-width: 1080px) {
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .management-grid {
     grid-template-columns: 1fr;
   }
 }

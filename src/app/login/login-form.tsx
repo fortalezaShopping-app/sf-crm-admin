@@ -4,8 +4,14 @@ import { FormEvent, useState } from 'react';
 import { LockKeyhole, LogIn, Mail, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { ApiError, adminLogin } from '@/lib/api';
-import { saveAdminSession } from '@/lib/auth';
+import {
+  ApiError,
+  adminLogin,
+  findUtilizadorByEmail,
+  getMe,
+  resolveBackofficeRole,
+} from '@/lib/api';
+import { createAdminSession, saveAdminSession } from '@/lib/auth';
 
 export function LoginForm() {
   const router = useRouter();
@@ -26,8 +32,21 @@ export function LoginForm() {
         throw new Error('A API respondeu sem token.');
       }
 
-      saveAdminSession({ ...response, token: response.token });
+      const currentUser = await getMe(response.token);
+      const userDetails = currentUser.id
+        ? currentUser
+        : await findUtilizadorByEmail(response.token, currentUser.email ?? email).catch(
+            () => currentUser,
+          );
+      const resolvedRole = await resolveBackofficeRole(response.token, userDetails.id);
+      const session = createAdminSession(response, {
+        ...userDetails,
+        role: userDetails.role ?? resolvedRole,
+      });
+
+      saveAdminSession(session);
       router.replace('/dashboard');
+      router.refresh();
     } catch (loginError) {
       setError(getLoginErrorMessage(loginError));
     } finally {

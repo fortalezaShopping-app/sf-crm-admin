@@ -1,35 +1,21 @@
 'use client';
 
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import {
-  Bell,
-  Gift,
-  LayoutDashboard,
-  LogOut,
-  ReceiptText,
-  Search,
-  Store,
-  Trophy,
-  UserCog,
-  Users,
-  WalletCards,
-} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Gift, Store, Trophy, Users, WalletCards } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
-import { ShoppingLogo } from '@/components/brand/ShoppingLogo';
 import {
-  clearAdminSession,
-  getAdminSessionSnapshot,
-  subscribeAdminSession,
-  type AdminSession,
-} from '@/lib/auth';
-
-type NavItem = {
-  href: string;
-  icon: LucideIcon;
-  label: string;
-};
+  ApiError,
+  listLojas,
+  listRecompensas,
+  listRegrasPontuacao,
+  listUtilizadores,
+  type Loja,
+  type Recompensa,
+  type RegraPontuacao,
+  type Utilizador,
+} from '@/lib/api';
+import { getAdminSessionSnapshot } from '@/lib/auth';
 
 type StatItem = {
   change: string;
@@ -38,258 +24,247 @@ type StatItem = {
   value: string;
 };
 
-const navItems: NavItem[] = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/dashboard/lojas', icon: Store, label: 'Lojas' },
-  { href: '/dashboard/clientes', icon: Users, label: 'Clientes' },
-  { href: '/dashboard/comprovativos', icon: ReceiptText, label: 'Comprovativos' },
-  { href: '/dashboard/recompensas', icon: Gift, label: 'Recompensas' },
-  { href: '/dashboard/utilizadores', icon: UserCog, label: 'Utilizadores' },
-];
-
-const stats: StatItem[] = [
-  { change: '+12% esta semana', icon: ReceiptText, label: 'Comprovativos', value: '128' },
-  { change: '42 lojas ativas', icon: Store, label: 'Lojas', value: '42' },
-  { change: '+8 novos clientes', icon: Users, label: 'Clientes', value: '1.284' },
-  { change: '18 disponiveis', icon: Gift, label: 'Recompensas', value: '18' },
-];
-
-const pendingReceipts = [
-  {
-    client: 'Adilson Manuel',
-    store: 'KFC Fortaleza',
-    total: 'AOA 18.400',
-    status: 'Pendente',
-  },
-  {
-    client: 'Marta Silva',
-    store: 'Zara',
-    total: 'AOA 96.900',
-    status: 'Pendente',
-  },
-  {
-    client: 'Carlos Domingos',
-    store: 'Cinema X',
-    total: 'AOA 7.500',
-    status: 'Aprovado',
-  },
-];
-
-const quickActions = [
-  {
-    icon: Store,
-    label: 'Cadastrar loja',
-    text: 'Criar ou atualizar informacoes comerciais.',
-  },
-  {
-    icon: Trophy,
-    label: 'Regras de pontos',
-    text: 'Configurar campanhas e pontuacao.',
-  },
-  {
-    icon: WalletCards,
-    label: 'Validar comprovativos',
-    text: 'Acompanhar compras enviadas no mobile.',
-  },
-];
+type DashboardState = {
+  clientes: Utilizador[];
+  error: string | null;
+  isLoading: boolean;
+  lojas: Loja[];
+  recompensas: Recompensa[];
+  regras: RegraPontuacao[];
+};
 
 export function DashboardClient() {
-  const router = useRouter();
-  const session = useSyncExternalStore(
-    subscribeAdminSession,
-    getAdminSessionSnapshot,
-    getServerSessionSnapshot,
-  );
+  const [state, setState] = useState<DashboardState>({
+    clientes: [],
+    error: null,
+    isLoading: true,
+    lojas: [],
+    recompensas: [],
+    regras: [],
+  });
 
   useEffect(() => {
-    if (!session) {
-      router.replace('/login');
+    let isMounted = true;
+    const session = getAdminSessionSnapshot();
+
+    if (!session?.token) {
+      return;
     }
-  }, [router, session]);
 
-  const initials = useMemo(() => {
-    const source = session?.nome ?? session?.email ?? 'Admin';
-    return source
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0])
-      .join('')
-      .toUpperCase();
-  }, [session]);
+    Promise.all([
+      listLojas(session.token),
+      listUtilizadores(session.token, 'CLIENTE'),
+      listRecompensas(session.token),
+      listRegrasPontuacao(session.token),
+    ])
+      .then(([lojas, clientes, recompensas, regras]) => {
+        if (isMounted) {
+          setState({
+            clientes,
+            error: null,
+            isLoading: false,
+            lojas,
+            recompensas,
+            regras,
+          });
+        }
+      })
+      .catch((error: unknown) => {
+        if (isMounted) {
+          setState((currentState) => ({
+            ...currentState,
+            error: getErrorMessage(error),
+            isLoading: false,
+          }));
+        }
+      });
 
-  function handleSignOut() {
-    clearAdminSession();
-    router.replace('/login');
-  }
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-  if (!session) {
-    return <main className="dashboard-loading">A validar sessao...</main>;
-  }
+  const stats = useMemo<StatItem[]>(
+    () => [
+      {
+        change: `${state.lojas.filter((loja) => loja.estado === 'ATIVA').length} ativas`,
+        icon: Store,
+        label: 'Lojas',
+        value: formatCount(state.lojas.length),
+      },
+      {
+        change: 'Registados no mobile',
+        icon: Users,
+        label: 'Clientes',
+        value: formatCount(state.clientes.length),
+      },
+      {
+        change: `${state.recompensas.filter((item) => item.estado === 'ATIVA').length} ativas`,
+        icon: Gift,
+        label: 'Recompensas',
+        value: formatCount(state.recompensas.length),
+      },
+      {
+        change: `${state.regras.filter((regra) => regra.ativo).length} ativas`,
+        icon: Trophy,
+        label: 'Regras de pontos',
+        value: formatCount(state.regras.length),
+      },
+    ],
+    [state],
+  );
+
+  const recentStores = state.lojas.slice(0, 5);
 
   return (
-    <main className="dashboard-shell">
-      <aside className="sidebar">
-        <ShoppingLogo size="sm" />
-
-        <nav className="sidebar-nav" aria-label="Navegacao principal">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = item.href === '/dashboard';
-
-            return (
-              <a
-                className={isActive ? 'nav-link nav-link--active' : 'nav-link'}
-                href={item.href}
-                key={item.href}
-              >
-                <Icon aria-hidden size={19} strokeWidth={2.2} />
-                <span>{item.label}</span>
-              </a>
-            );
-          })}
-        </nav>
-
-        <div className="sidebar-footer">
-          <div className="profile-chip">
-            <span className="avatar">{initials}</span>
-            <span>
-              <strong>{session?.nome ?? 'Administrador'}</strong>
-              <span>{session?.role ?? session?.tipo ?? 'Admin'}</span>
-            </span>
-          </div>
-
-          <button className="ghost-button" onClick={handleSignOut} type="button">
-            <LogOut aria-hidden size={17} strokeWidth={2.2} />
-            Sair
-          </button>
+    <div className="dashboard-content">
+      <section className="dashboard-heading">
+        <div className="heading-copy">
+          <p className="eyebrow">Visao geral</p>
+          <h1>Painel administrativo</h1>
+          <p>Controle operacional do Shopping Fortaleza para o time interno.</p>
         </div>
-      </aside>
 
-      <section className="main-panel">
-        <header className="topbar">
-          <label className="search-shell">
-            <Search aria-hidden size={18} strokeWidth={2.2} />
-            <input placeholder="Pesquisar lojas, clientes ou comprovativos" type="search" />
-          </label>
-
-          <div className="topbar-actions">
-            <button aria-label="Notificacoes" className="icon-button" type="button">
-              <Bell aria-hidden size={18} strokeWidth={2.2} />
-            </button>
-            <button className="ghost-button" type="button">
-              Novo cadastro
-            </button>
-          </div>
-        </header>
-
-        <div className="dashboard-content">
-          <section className="dashboard-heading">
-            <div className="heading-copy">
-              <p className="eyebrow">Visao geral</p>
-              <h1>Painel administrativo</h1>
-              <p>Controle operacional do Shopping Fortaleza para o time interno.</p>
-            </div>
-
-            <span className="status-pill">
-              <span className="status-dot" />
-              API configurada
-            </span>
-          </section>
-
-          <section className="stats-grid" aria-label="Indicadores principais">
-            {stats.map((stat) => {
-              const Icon = stat.icon;
-
-              return (
-                <article className="stat-card" key={stat.label}>
-                  <div className="stat-card__top">
-                    <span>{stat.label}</span>
-                    <span className="stat-card__icon">
-                      <Icon aria-hidden size={19} strokeWidth={2.2} />
-                    </span>
-                  </div>
-                  <strong>{stat.value}</strong>
-                  <small>{stat.change}</small>
-                </article>
-              );
-            })}
-          </section>
-
-          <section className="workspace-grid">
-            <article className="panel">
-              <div className="panel-header">
-                <h2>Comprovativos recentes</h2>
-                <a href="/dashboard/comprovativos">Ver todos</a>
-              </div>
-
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Cliente</th>
-                    <th>Loja</th>
-                    <th>Valor</th>
-                    <th>Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingReceipts.map((receipt) => (
-                    <tr key={`${receipt.client}-${receipt.store}`}>
-                      <td>
-                        <span className="table-title">
-                          <strong>{receipt.client}</strong>
-                          <span>Compra enviada pelo app</span>
-                        </span>
-                      </td>
-                      <td>{receipt.store}</td>
-                      <td>{receipt.total}</td>
-                      <td>
-                        <span
-                          className={
-                            receipt.status === 'Aprovado'
-                              ? 'badge badge--success'
-                              : 'badge badge--warning'
-                          }
-                        >
-                          {receipt.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </article>
-
-            <article className="panel">
-              <div className="panel-header">
-                <h2>Acesso rapido</h2>
-              </div>
-
-              <div className="quick-list">
-                {quickActions.map((action) => {
-                  const Icon = action.icon;
-
-                  return (
-                    <a className="quick-action" href="/dashboard" key={action.label}>
-                      <span className="quick-action__icon">
-                        <Icon aria-hidden size={18} strokeWidth={2.2} />
-                      </span>
-                      <span>
-                        <strong>{action.label}</strong>
-                        <span>{action.text}</span>
-                      </span>
-                    </a>
-                  );
-                })}
-              </div>
-            </article>
-          </section>
-        </div>
+        <span className={state.error ? 'status-pill status-pill--danger' : 'status-pill'}>
+          <span className="status-dot" />
+          {state.error ? 'API com aviso' : 'API configurada'}
+        </span>
       </section>
-    </main>
+
+      {state.error ? <p className="form-error">{state.error}</p> : null}
+
+      <section className="stats-grid" aria-label="Indicadores principais">
+        {stats.map((stat) => {
+          const Icon = stat.icon;
+
+          return (
+            <article className="stat-card" key={stat.label}>
+              <div className="stat-card__top">
+                <span>{stat.label}</span>
+                <span className="stat-card__icon">
+                  <Icon aria-hidden size={19} strokeWidth={2.2} />
+                </span>
+              </div>
+              <strong>{state.isLoading ? '...' : stat.value}</strong>
+              <small>{stat.change}</small>
+            </article>
+          );
+        })}
+      </section>
+
+      <section className="workspace-grid">
+        <article className="panel">
+          <div className="panel-header">
+            <h2>Lojas recentes</h2>
+            <a href="/dashboard/lojas">Gerir lojas</a>
+          </div>
+
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Loja</th>
+                <th>NIF</th>
+                <th>Telefone</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentStores.length > 0 ? (
+                recentStores.map((loja) => (
+                  <tr key={loja.id ?? loja.nome}>
+                    <td>
+                      <span className="table-title">
+                        <strong>{loja.nome ?? 'Loja sem nome'}</strong>
+                        <span>{loja.email ?? loja.endereco ?? 'Sem contacto'}</span>
+                      </span>
+                    </td>
+                    <td>{loja.nif ?? '-'}</td>
+                    <td>{loja.telefone ?? '-'}</td>
+                    <td>
+                      <span
+                        className={
+                          loja.estado === 'ATIVA'
+                            ? 'badge badge--success'
+                            : 'badge badge--warning'
+                        }
+                      >
+                        {loja.estado ?? 'Sem estado'}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4}>{state.isLoading ? 'A carregar...' : 'Sem lojas registadas.'}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </article>
+
+        <article className="panel">
+          <div className="panel-header">
+            <h2>Acesso rapido</h2>
+          </div>
+
+          <div className="quick-list">
+            <QuickAction
+              href="/dashboard/lojas"
+              icon={Store}
+              label="Cadastrar loja"
+              text="Criar ou atualizar informacoes comerciais."
+            />
+            <QuickAction
+              href="/dashboard/regras"
+              icon={Trophy}
+              label="Regras de pontos"
+              text="Configurar campanhas e pontuacao."
+            />
+            <QuickAction
+              href="/dashboard/comprovativos"
+              icon={WalletCards}
+              label="Validar faturas"
+              text="Aprovar ou rejeitar comprovativos por ID."
+            />
+          </div>
+        </article>
+      </section>
+    </div>
   );
 }
 
-function getServerSessionSnapshot(): AdminSession | null {
-  return null;
+function QuickAction({
+  href,
+  icon: Icon,
+  label,
+  text,
+}: {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  text: string;
+}) {
+  return (
+    <a className="quick-action" href={href}>
+      <span className="quick-action__icon">
+        <Icon aria-hidden size={18} strokeWidth={2.2} />
+      </span>
+      <span>
+        <strong>{label}</strong>
+        <span>{text}</span>
+      </span>
+    </a>
+  );
+}
+
+function formatCount(value: number) {
+  return new Intl.NumberFormat('pt-AO').format(value);
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof ApiError || error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Nao foi possivel carregar os dados.';
 }

@@ -1,16 +1,19 @@
 import { ShoppingLogo } from '@/components/brand/ShoppingLogo';
 
 import { LoginForm } from './login-form';
+import { LoginRedirect } from './login-redirect';
 
 const metrics = [
   { label: 'operacao', value: 'CRM' },
   { label: 'canal web', value: 'Admin' },
-  { label: 'API v1', value: 'Online' },
+  { label: 'API nova', value: 'Online' },
 ];
 
 export default function LoginPage() {
   return (
     <main className="login-page">
+      <LoginRedirect />
+
       <section className="login-intro" aria-label="Resumo do painel">
         <ShoppingLogo />
 
