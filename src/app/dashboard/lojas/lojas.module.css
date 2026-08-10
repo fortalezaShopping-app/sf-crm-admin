@@ -12,12 +12,14 @@
 .heading {
   display: flex;
   align-items: flex-end;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 24px;
 }
 
 .headingCopy {
   display: grid;
+  min-width: 0;
   gap: 6px;
 }
 
@@ -55,6 +57,7 @@
   font-weight: 500;
   line-height: 18px;
   padding: 0 20px;
+  white-space: nowrap;
 }
 
 .inviteButton:hover {
@@ -576,6 +579,8 @@
   .statusTabs {
     width: 100%;
     overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
   }
 
   .statusTab,
@@ -628,9 +633,31 @@
 @media (max-width: 470px) {
   .heading {
     display: grid;
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .inviteButton {
-    width: fit-content;
+    width: 100%;
+  }
+
+  .modalHeader {
+    grid-template-columns: 32px minmax(0, 1fr) 34px;
+    gap: 8px;
+    padding: 14px;
+  }
+
+  .modalTitleIcon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .modalHeader h2 {
+    font-size: 18px;
+    line-height: 22px;
+  }
+
+  .modalHeader p {
+    overflow-wrap: anywhere;
   }
 }

@@ -184,6 +184,40 @@
   padding: 9px 10px;
 }
 
+.legalLinks {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+  border-top: 1px solid rgba(139, 50, 31, 0.18);
+  color: #765f57;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 15px;
+  padding-top: 16px;
+  text-align: center;
+}
+
+.legalLinks a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #8b321f;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.legalLinks a:hover {
+  color: #6b2618;
+}
+
+.legalLinks a:focus-visible {
+  border-radius: 3px;
+  outline: 2px solid rgba(139, 50, 31, 0.35);
+  outline-offset: 3px;
+}
+
 .srOnly {
   position: absolute;
   width: 1px;
@@ -205,6 +239,21 @@
 
   .card {
     padding: 34px 24px 38px;
+  }
+}
+
+@media (max-width: 360px) {
+  .page {
+    padding-inline: 12px;
+  }
+
+  .card {
+    gap: 18px;
+    padding: 28px 18px 32px;
+  }
+
+  .legalLinks {
+    gap: 5px;
   }
 }
 

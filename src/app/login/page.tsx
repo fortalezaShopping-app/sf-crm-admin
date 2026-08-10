@@ -1,4 +1,6 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { ExternalLink } from 'lucide-react';
 
 import { ShoppingLogo } from '@/components/brand/ShoppingLogo';
 import { getAuthenticatedAdminSession } from '@/lib/server-auth';
@@ -27,6 +29,19 @@ export default async function LoginPage() {
           </header>
 
           <LoginForm />
+
+          <nav aria-label="Links institucionais" className={styles.legalLinks}>
+            <Link href="/politica-de-privacidade">Política de privacidade</Link>
+            <span aria-hidden>•</span>
+            <a
+              href="https://shoppingfortaleza.co.ao/"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Site oficial
+              <ExternalLink aria-hidden size={11} strokeWidth={1.8} />
+            </a>
+          </nav>
         </section>
       </div>
     </main>

@@ -1,0 +1,215 @@
+.page {
+  min-height: 100vh;
+  background: #f3ece8;
+  color: #39251e;
+  font-family: var(--font-sans);
+}
+
+.siteHeader {
+  border-bottom: 1px solid #ddcec7;
+  background: #ffffff;
+}
+
+.headerInner {
+  display: flex;
+  width: min(100%, 920px);
+  min-height: 76px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 0 auto;
+  padding: 12px 28px;
+}
+
+.brandLink,
+.officialLink,
+.backLink,
+.contactLink {
+  display: inline-flex;
+  align-items: center;
+}
+
+.officialLink,
+.backLink,
+.contactLink {
+  gap: 7px;
+  color: #8b321f;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.officialLink {
+  font-size: 13px;
+}
+
+.document {
+  width: min(100%, 820px);
+  margin: 0 auto;
+  padding: 42px 28px 56px;
+}
+
+.backLink {
+  width: fit-content;
+  font-size: 13px;
+}
+
+.intro {
+  display: grid;
+  gap: 10px;
+  margin-top: 34px;
+  padding-bottom: 30px;
+  border-bottom: 1px solid #d9c7c0;
+}
+
+.intro p,
+.intro h1,
+.intro time,
+.policySection h2,
+.policySection p {
+  margin: 0;
+}
+
+.intro > p:first-child {
+  color: #b4442c;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.intro h1 {
+  color: #8b321f;
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 44px;
+}
+
+.intro time {
+  color: #826b60;
+  font-size: 12px;
+}
+
+.intro .lead {
+  max-width: 680px;
+  margin-top: 8px;
+  color: #5f4940;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.sections {
+  display: grid;
+}
+
+.policySection {
+  display: grid;
+  gap: 10px;
+  border-bottom: 1px solid #dfd1cb;
+  padding: 26px 0;
+}
+
+.policySection h2 {
+  color: #8b321f;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 25px;
+}
+
+.policySection p,
+.policySection li {
+  color: #513b33;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 22px;
+}
+
+.policySection ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.policySection li::marker {
+  color: #e9d51f;
+}
+
+.contactLink {
+  width: fit-content;
+  max-width: 100%;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.footer {
+  display: flex;
+  min-height: 74px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-top: 1px solid #ddcec7;
+  background: #ffffff;
+  color: #765f57;
+  font-size: 12px;
+  padding: 18px 24px;
+}
+
+.footer a {
+  color: #8b321f;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .headerInner,
+  .document {
+    padding-inline: 20px;
+  }
+
+  .officialLink {
+    font-size: 12px;
+  }
+
+  .document {
+    padding-block: 30px 42px;
+  }
+
+  .intro {
+    margin-top: 28px;
+  }
+
+  .intro h1 {
+    font-size: 30px;
+    line-height: 36px;
+  }
+
+  .intro .lead {
+    font-size: 15px;
+    line-height: 23px;
+  }
+
+  .footer {
+    align-items: center;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 390px) {
+  .headerInner,
+  .document {
+    padding-inline: 16px;
+  }
+
+  .headerInner {
+    gap: 12px;
+  }
+
+  .intro h1 {
+    font-size: 27px;
+    line-height: 32px;
+  }
+
+  .contactLink {
+    align-items: flex-start;
+  }
+}

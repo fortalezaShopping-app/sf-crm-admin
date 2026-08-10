@@ -92,59 +92,61 @@ export function ClientesClient() {
           </span>
         </div>
 
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Cliente</th>
-              <th>Telefone</th>
-              <th>Ultimo login</th>
-              <th>Estado</th>
-              <th>Acoes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {clientes.length > 0 ? (
-              clientes.map((cliente) => (
-                <tr key={cliente.id ?? cliente.email}>
-                  <td>
-                    <span className="table-title">
-                      <strong>{cliente.nome ?? 'Cliente sem nome'}</strong>
-                      <span>{cliente.email ?? 'Sem email'}</span>
-                    </span>
-                  </td>
-                  <td>
-                    <button
-                      className="table-action table-action--danger"
-                      disabled={!cliente.id || actionId === cliente.id}
-                      onClick={() => void handleDeactivate(cliente)}
-                      type="button"
-                    >
-                      <Ban aria-hidden size={14} />
-                      Desativar
-                    </button>
-                  </td>
-                  <td>{cliente.telefone ?? '-'}</td>
-                  <td>{formatDate(cliente.ultimoLogin)}</td>
-                  <td>
-                    <span
-                      className={
-                        cliente.estado === 'ATIVO'
-                          ? 'badge badge--success'
-                          : 'badge badge--warning'
-                      }
-                    >
-                      {cliente.estado ?? 'Sem estado'}
-                    </span>
-                  </td>
-                </tr>
-              ))
-            ) : (
+        <div className="table-scroll">
+          <table className="admin-table">
+            <thead>
               <tr>
-                <td colSpan={5}>{isLoading ? 'A carregar...' : 'Sem clientes registados.'}</td>
+                <th>Cliente</th>
+                <th>Telefone</th>
+                <th>Último login</th>
+                <th>Estado</th>
+                <th>Ações</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {clientes.length > 0 ? (
+                clientes.map((cliente) => (
+                  <tr key={cliente.id ?? cliente.email}>
+                    <td>
+                      <span className="table-title">
+                        <strong>{cliente.nome ?? 'Cliente sem nome'}</strong>
+                        <span>{cliente.email ?? 'Sem email'}</span>
+                      </span>
+                    </td>
+                    <td>{cliente.telefone ?? '-'}</td>
+                    <td>{formatDate(cliente.ultimoLogin)}</td>
+                    <td>
+                      <span
+                        className={
+                          cliente.estado === 'ATIVO'
+                            ? 'badge badge--success'
+                            : 'badge badge--warning'
+                        }
+                      >
+                        {cliente.estado ?? 'Sem estado'}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        className="table-action table-action--danger"
+                        disabled={!cliente.id || actionId === cliente.id}
+                        onClick={() => void handleDeactivate(cliente)}
+                        type="button"
+                      >
+                        <Ban aria-hidden size={14} />
+                        Desativar
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5}>{isLoading ? 'A carregar...' : 'Sem clientes registados.'}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
         <Pagination
           isLoading={isLoading}
           onPageChange={setPage}

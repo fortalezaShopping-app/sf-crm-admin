@@ -111,18 +111,24 @@ export function AdminShell({ children, initialSession: session }: AdminShellProp
         </nav>
 
         <div className={styles.sidebarFooter}>
-          <Link className={styles.footerLink} href="/dashboard/configuracoes">
+          <Link
+            aria-label="Abrir configurações"
+            className={styles.footerLink}
+            href="/dashboard/configuracoes"
+            title="Configurações"
+          >
             <Settings aria-hidden size={18} strokeWidth={1.6} />
-            Configurações
+            <span>Configurações</span>
           </Link>
           <button
             aria-label={`Sair da sessão de ${adminLabel}`}
             className={styles.footerLink}
             onClick={() => void handleSignOut()}
+            title="Sair"
             type="button"
           >
             <LogOut aria-hidden size={18} strokeWidth={1.6} />
-            Sair
+            <span>Sair</span>
           </button>
         </div>
       </aside>

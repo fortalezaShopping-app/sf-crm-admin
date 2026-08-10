@@ -25,9 +25,11 @@
 
 html {
   background: var(--background);
+  overflow-x: clip;
 }
 
 body {
+  min-width: 0;
   min-height: 100vh;
   margin: 0;
   background: var(--background);
@@ -544,24 +546,31 @@ a {
 .topbar-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 10px;
 }
 
 .dashboard-content {
   display: grid;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   gap: 18px;
-  padding: 24px;
+  padding: clamp(16px, 2.2vw, 32px);
 }
 
 .dashboard-heading {
   display: flex;
   align-items: flex-end;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 18px;
 }
 
 .heading-copy {
   display: grid;
+  min-width: 0;
   gap: 7px;
 }
 
@@ -656,12 +665,14 @@ a {
 
 .workspace-grid {
   display: grid;
+  min-width: 0;
   grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.8fr);
   gap: 16px;
 }
 
 .management-grid {
   display: grid;
+  min-width: 0;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
   gap: 16px;
   align-items: start;
@@ -672,6 +683,7 @@ a {
 }
 
 .panel {
+  width: 100%;
   min-width: 0;
   overflow: hidden;
 }
@@ -849,11 +861,17 @@ a {
 
 .admin-table {
   width: 100%;
+  min-width: 700px;
   border-collapse: collapse;
 }
 
 .table-scroll {
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-color: #c9aea4 transparent;
+  scrollbar-width: thin;
 }
 
 .store-filters {
@@ -1042,6 +1060,7 @@ a {
 .table-pagination {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
   border-top: 1px solid var(--border);
@@ -1070,6 +1089,7 @@ a {
   font-weight: 850;
   line-height: 16px;
   padding: 0 9px;
+  white-space: nowrap;
 }
 
 .table-action:hover {
@@ -1269,6 +1289,10 @@ a {
   .search-shell {
     width: 100%;
   }
+
+  .dashboard-heading {
+    align-items: flex-start;
+  }
 }
 
 @media (max-width: 620px) {
@@ -1291,11 +1315,26 @@ a {
   }
 
   .dashboard-content {
-    padding: 16px;
+    gap: 16px;
+    padding: 16px 14px 28px;
+  }
+
+  .heading-copy {
+    width: 100%;
+  }
+
+  .topbar-actions {
+    display: grid;
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .dashboard-heading > .ghost-button {
+    width: 100%;
   }
 
   .admin-table {
-    min-width: 620px;
+    min-width: 660px;
   }
 
   .form-actions,
@@ -1307,5 +1346,63 @@ a {
 
   .store-search {
     grid-column: auto;
+  }
+
+  .panel-header,
+  .admin-form,
+  .helper-panel {
+    padding: 14px;
+  }
+
+  .detail-list > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .table-pagination {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 12px 14px;
+    text-align: center;
+  }
+
+  .table-pagination__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .table-pagination__actions .table-action {
+    justify-content: center;
+  }
+
+  .primary-button,
+  .ghost-button {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 420px) {
+  .dashboard-content {
+    padding-inline: 12px;
+  }
+
+  .login-intro h1,
+  .login-card h1,
+  .dashboard-heading h1 {
+    font-size: 26px;
+    line-height: 31px;
+  }
+
+  .topbar-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar-actions > * {
+    width: 100%;
+  }
+
+  .panel-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
   }
 }

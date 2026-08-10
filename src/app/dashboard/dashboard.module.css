@@ -18,6 +18,7 @@
 
 .headingCopy {
   display: grid;
+  min-width: 0;
   gap: 6px;
 }
 
@@ -45,6 +46,7 @@
 .headingActions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 20px;
 }
 
@@ -396,18 +398,49 @@
     padding: 20px;
   }
 
+  .chartHeader,
+  .activityHeader {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .activityHeader {
+    min-height: 58px;
+    padding: 12px 18px;
+  }
+
+  .activityTable {
+    min-width: 580px;
+  }
+
+  .activityTable th,
+  .activityTable td {
+    padding-inline: 18px;
+  }
+
   .activityCard {
     margin: 0;
   }
 }
 
 @media (max-width: 460px) {
-  .metricsGrid {
-    grid-template-columns: 1fr;
-  }
-
   .headingActions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .chartCard {
+    padding: 18px 16px;
+  }
+
+  .barChart {
+    gap: 10px;
+    padding-inline: 0;
+  }
+}
+
+@media (max-width: 340px) {
+  .metricsGrid {
+    grid-template-columns: 1fr;
   }
 }
