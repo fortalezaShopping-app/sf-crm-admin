@@ -15,7 +15,7 @@
 .panelTitle {
   margin: 0 0 18px;
   color: #ffffff;
-  font-family: "Dax Pro", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 28px;
   font-weight: 500;
   line-height: 1;
@@ -73,7 +73,7 @@
 .header p {
   margin: 0;
   color: #8b321f;
-  font-family: "Dax Pro", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   letter-spacing: 0;
 }
 
@@ -127,7 +127,7 @@
   outline: 0;
   background: transparent;
   color: #5c2619;
-  font-family: "Dax Pro", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 400;
   line-height: 18px;
@@ -148,7 +148,7 @@
   border-radius: 7px;
   background: #8b321f;
   color: #ffffff;
-  font-family: "Dax Pro", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 500;
   line-height: 18px;

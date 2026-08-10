@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 
+import { daxline } from '@/components/font';
+
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -13,8 +15,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-AO">
-      <body>{children}</body>
+    <html className={daxline.variable} lang="pt-AO">
+      <body className={daxline.className}>{children}</body>
     </html>
   );
 }

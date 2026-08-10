@@ -29,7 +29,7 @@ export type Loja = {
   facebookUrl?: string;
   instagramUrl?: string;
   sourceUrl?: string;
-  estado?: 'ATIVA' | 'INATIVA';
+  estado?: 'ATIVA' | 'PENDENTE' | 'INATIVA';
   createdAt?: string;
   updatedAt?: string;
 };
@@ -176,12 +176,28 @@ export type ListOptions = {
 };
 
 export type DashboardSummary = {
-  clientesTotal: number;
-  lojasAtivas: number;
-  lojasComImagem: number;
-  lojasRecentes: Loja[];
-  lojasTotal: number;
-  utilizadoresInternosTotal: number;
+  activeStores: number;
+  pendingInvoices: number;
+  receiptStatus: {
+    approved: number;
+    other: number;
+    pending: number;
+    rejected: number;
+    total: number;
+  };
+  rewardsTotal: number;
+  topStores: Array<{
+    category: string;
+    name: string;
+    pointsTotal?: number;
+    receiptCount: number;
+    storeId?: number;
+  }>;
+  usersTotal: number;
+  volumeByPeriod: Array<{
+    label: string;
+    transactions: number;
+  }>;
 };
 
 type ApiRequestOptions = Omit<RequestInit, 'body' | 'cache'> & {
@@ -549,13 +565,20 @@ function isErrorShape(
 }
 
 function toLoja(store: StoreResponse): Loja {
+  const status = store.status?.toUpperCase();
+
   return {
     categoria: store.category,
     createdAt: store.createdAt,
     descricao: store.description,
     email: store.email,
     endereco: store.address,
-    estado: store.status?.toUpperCase() === 'ACTIVE' ? 'ATIVA' : 'INATIVA',
+    estado:
+      status === 'ACTIVE' || status === 'ATIVA'
+        ? 'ATIVA'
+        : status === 'PENDING' || status === 'PENDENTE' || status === 'INVITED'
+          ? 'PENDENTE'
+          : 'INATIVA',
     facebookUrl: store.facebookUrl,
     horario: store.openingHours,
     id: store.id,

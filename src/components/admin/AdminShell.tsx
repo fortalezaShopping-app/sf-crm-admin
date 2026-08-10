@@ -2,13 +2,14 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
-  LayoutDashboard,
+  BarChart3,
+  Bell,
+  FileText,
+  Gift,
   LogOut,
-  ReceiptText,
   Search,
+  Settings,
   Store,
-  UserCog,
-  UserRound,
   Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -18,6 +19,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ShoppingLogo } from '@/components/brand/ShoppingLogo';
 import type { AdminSession } from '@/lib/admin-session';
 import { ADMIN_AUTH_EXPIRED_EVENT } from '@/lib/api';
+
+import styles from './AdminShell.module.css';
 
 type NavItem = {
   href: string;
@@ -31,12 +34,12 @@ type AdminShellProps = {
 };
 
 const navItems: NavItem[] = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/dashboard/lojas', icon: Store, label: 'Lojas' },
-  { href: '/dashboard/clientes', icon: Users, label: 'Clientes' },
-  { href: '/dashboard/utilizadores', icon: UserCog, label: 'Utilizadores' },
-  { href: '/dashboard/comprovativos', icon: ReceiptText, label: 'Faturas' },
-  { href: '/dashboard/perfil', icon: UserRound, label: 'Perfil' },
+  { href: '/dashboard/lojas', icon: Store, label: 'Lojistas' },
+  { href: '/dashboard/comprovativos', icon: FileText, label: 'Talões' },
+  { href: '/dashboard/recompensas', icon: Gift, label: 'Recompensas' },
+  { href: '/dashboard', icon: BarChart3, label: 'Analytics' },
+  { href: '/dashboard/auditoria', icon: Bell, label: 'Notificações' },
+  { href: '/dashboard/utilizadores', icon: Users, label: 'Utilizadores' },
 ];
 
 export function AdminShell({ children, initialSession: session }: AdminShellProps) {
@@ -58,16 +61,10 @@ export function AdminShell({ children, initialSession: session }: AdminShellProp
     };
   }, [router]);
 
-  const initials = useMemo(() => {
-    const source = session.nome ?? session.email ?? 'Admin';
-    return source
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0])
-      .join('')
-      .toUpperCase();
-  }, [session.email, session.nome]);
+  const adminLabel = useMemo(
+    () => session.nome ?? session.email ?? 'Administrador',
+    [session.email, session.nome],
+  );
 
   async function handleSignOut() {
     await fetch('/api/session/logout', { method: 'POST' }).catch(() => undefined);
@@ -87,11 +84,13 @@ export function AdminShell({ children, initialSession: session }: AdminShellProp
   }
 
   return (
-    <main className="dashboard-shell">
-      <aside className="sidebar">
-        <ShoppingLogo size="sm" />
+    <main className={styles.shell}>
+      <aside className={styles.sidebar}>
+        <Link aria-label="Visão geral" className={styles.logoLink} href="/dashboard">
+          <ShoppingLogo size="sm" />
+        </Link>
 
-        <nav className="sidebar-nav" aria-label="Navegacao principal">
+        <nav className={styles.navigation} aria-label="Navegação principal">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive =
@@ -99,57 +98,51 @@ export function AdminShell({ children, initialSession: session }: AdminShellProp
 
             return (
               <Link
-                className={isActive ? 'nav-link nav-link--active' : 'nav-link'}
+                className={isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink}
                 href={item.href}
                 key={item.href}
+                title={item.label}
               >
-                <Icon aria-hidden size={19} strokeWidth={2.2} />
+                <Icon aria-hidden size={18} strokeWidth={1.6} />
                 <span>{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="sidebar-footer">
-          <div className="profile-chip">
-            <span className="avatar">{initials}</span>
-            <span>
-              <strong>{session.nome ?? 'Administrador'}</strong>
-              <span>{session.role}</span>
-            </span>
-          </div>
-
-          <button className="ghost-button" onClick={() => void handleSignOut()} type="button">
-            <LogOut aria-hidden size={17} strokeWidth={2.2} />
+        <div className={styles.sidebarFooter}>
+          <Link className={styles.footerLink} href="/dashboard/configuracoes">
+            <Settings aria-hidden size={18} strokeWidth={1.6} />
+            Configurações
+          </Link>
+          <button
+            aria-label={`Sair da sessão de ${adminLabel}`}
+            className={styles.footerLink}
+            onClick={() => void handleSignOut()}
+            type="button"
+          >
+            <LogOut aria-hidden size={18} strokeWidth={1.6} />
             Sair
           </button>
         </div>
       </aside>
 
-      <section className="main-panel">
-        <header className="topbar">
+      <section className={styles.mainPanel}>
+        <header className={styles.topbar}>
           <form
             aria-label="Pesquisar no backoffice"
-            className="search-shell"
+            className={styles.searchShell}
             onSubmit={handleSearch}
           >
-            <Search aria-hidden size={18} strokeWidth={2.2} />
+            <Search aria-hidden size={17} strokeWidth={1.7} />
             <input
+              aria-label="Pesquisar no painel"
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Pesquisar no backoffice"
+              placeholder="Pesquisar"
               type="search"
               value={search}
             />
           </form>
-
-          <div className="topbar-actions">
-            <Link aria-label="Perfil" className="icon-button" href="/dashboard/perfil">
-              <UserRound aria-hidden size={18} strokeWidth={2.2} />
-            </Link>
-            <Link className="ghost-button" href="/dashboard/lojas">
-              Novo cadastro
-            </Link>
-          </div>
         </header>
 
         {children}

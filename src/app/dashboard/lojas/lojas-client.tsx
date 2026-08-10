@@ -11,9 +11,9 @@ import {
 import {
   Ban,
   Building2,
+  FilePlus2,
   Pencil,
   Plus,
-  RefreshCcw,
   Save,
   Search,
   Store,
@@ -37,6 +37,8 @@ import {
   type LojaRequest,
 } from '@/lib/api';
 
+import styles from './lojas.module.css';
+
 type FormState = {
   categoria: string;
   descricao: string;
@@ -53,8 +55,7 @@ type FormState = {
   telefone: string;
 };
 
-type StatusFilter = 'all' | 'ATIVA' | 'INATIVA';
-type FloorFilter = 'all' | LojaFloor;
+type StatusFilter = 'all' | 'ATIVA' | 'PENDENTE' | 'INATIVA';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -86,32 +87,32 @@ const defaultCategories = [
 ] as const;
 
 const floorOptions: Array<{ label: string; value: LojaFloor }> = [
-  { label: 'Res do chao', value: 'GROUND_FLOOR' },
+  { label: 'Rés do chão', value: 'GROUND_FLOOR' },
   { label: 'Piso 1', value: 'FLOOR_1' },
   { label: 'Piso 2', value: 'FLOOR_2' },
   { label: 'Pisos 2 e 4', value: 'FLOORS_2_AND_4' },
   { label: 'Piso 3', value: 'FLOOR_3' },
   { label: 'Piso 4', value: 'FLOOR_4' },
-  { label: 'Terraco do piso 4', value: 'FLOOR_4_TERRACE' },
+  { label: 'Terraço do piso 4', value: 'FLOOR_4_TERRACE' },
 ];
 
 export function LojasClient() {
   const [actionId, setActionId] = useState<string | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState('all');
   const [editingStoreId, setEditingStoreId] = useState<number | null>(null);
-  const [floorFilter, setFloorFilter] = useState<FloorFilter>('all');
   const [form, setForm] = useState<FormState>(initialFormState);
   const [image, setImage] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [mediaVersion, setMediaVersion] = useState(0);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lojas, setLojas] = useState<Loja[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState('');
+  const [selectedStoreIds, setSelectedStoreIds] = useState<Set<number>>(new Set());
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const formRef = useRef<HTMLFormElement>(null);
   const imagePreviewRef = useRef<string | null>(null);
@@ -153,6 +154,28 @@ export function LojasClient() {
     [],
   );
 
+  useEffect(() => {
+    if (!isEditorOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !isSubmitting) {
+        setIsEditorOpen(false);
+      }
+    }
+
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isEditorOpen, isSubmitting]);
+
   const categoryOptions = useMemo(
     () =>
       Array.from(
@@ -183,12 +206,10 @@ export function LojasClient() {
 
       return (
         (!normalizedQuery || searchableText.includes(normalizedQuery)) &&
-        (categoryFilter === 'all' || loja.categoria === categoryFilter) &&
-        (floorFilter === 'all' || loja.piso === floorFilter) &&
         (statusFilter === 'all' || loja.estado === statusFilter)
       );
     });
-  }, [categoryFilter, floorFilter, lojas, query, statusFilter]);
+  }, [lojas, query, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredLojas.length / ITEMS_PER_PAGE));
   const visiblePage = Math.min(page, totalPages - 1);
@@ -196,6 +217,12 @@ export function LojasClient() {
     visiblePage * ITEMS_PER_PAGE,
     (visiblePage + 1) * ITEMS_PER_PAGE,
   );
+  const visibleStoreIds = visibleLojas.flatMap((loja) =>
+    loja.id === undefined ? [] : [loja.id],
+  );
+  const areAllVisibleSelected =
+    visibleStoreIds.length > 0 &&
+    visibleStoreIds.every((storeId) => selectedStoreIds.has(storeId));
 
   function updateFilters(action: () => void) {
     setPage(0);
@@ -263,7 +290,7 @@ export function LojasClient() {
       setForm(toFormState(detail));
       setImageFile(null);
       setLogoFile(null);
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setIsEditorOpen(true);
     } catch (error) {
       setMessage(getErrorMessage(error));
     } finally {
@@ -292,7 +319,44 @@ export function LojasClient() {
     setForm(initialFormState);
     setImageFile(null);
     setLogoFile(null);
+    setIsEditorOpen(false);
     formRef.current?.reset();
+  }
+
+  function openCreateStore() {
+    resetForm();
+    setMessage(null);
+    setIsEditorOpen(true);
+  }
+
+  function toggleVisibleStores() {
+    setSelectedStoreIds((current) => {
+      const next = new Set(current);
+
+      visibleStoreIds.forEach((storeId) => {
+        if (areAllVisibleSelected) {
+          next.delete(storeId);
+        } else {
+          next.add(storeId);
+        }
+      });
+
+      return next;
+    });
+  }
+
+  function toggleStore(storeId: number) {
+    setSelectedStoreIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(storeId)) {
+        next.delete(storeId);
+      } else {
+        next.add(storeId);
+      }
+
+      return next;
+    });
   }
 
   async function handleDeactivate(loja: Loja) {
@@ -314,192 +378,162 @@ export function LojasClient() {
     }
   }
 
-  async function refreshStores() {
-    setMessage(null);
-    await loadLojas(true);
-  }
-
   return (
-    <div className="dashboard-content">
-      <section className="dashboard-heading">
-        <div className="heading-copy">
-          <p className="eyebrow">Diretorio comercial</p>
-          <h1>Lojas</h1>
-          <p>Registe e mantenha o catalogo apresentado no aplicativo.</p>
+    <div className={styles.page}>
+      <header className={styles.heading}>
+        <div className={styles.headingCopy}>
+          <h1>Visão geral</h1>
+          <p>Resumo de operações e performance do programa de fidelidade</p>
         </div>
 
-        <button
-          className="ghost-button"
-          disabled={isLoading}
-          onClick={() => void refreshStores()}
-          type="button"
-        >
-          <RefreshCcw aria-hidden size={16} />
-          Atualizar
+        <button className={styles.inviteButton} onClick={openCreateStore} type="button">
+          <FilePlus2 aria-hidden size={17} strokeWidth={1.7} />
+          Convidar loja
         </button>
-      </section>
+      </header>
 
-      {message ? <p className={getMessageClassName(message)}>{message}</p> : null}
+      {message && !isEditorOpen ? (
+        <p
+          className={message.includes('sucesso') ? styles.successNotice : styles.errorNotice}
+          role={message.includes('sucesso') ? 'status' : 'alert'}
+        >
+          {message}
+        </p>
+      ) : null}
 
-      <section className="management-grid management-grid--stores">
-        <article className="panel">
-          <div className="panel-header">
-            <div>
-              <h2>Lojas registadas</h2>
-              <p className="panel-subtitle">{filteredLojas.length} de {lojas.length} lojas</p>
-            </div>
-            <span className="count-pill">{lojas.length}</span>
+      <section className={styles.tableCard}>
+        <div className={styles.filters}>
+          <div aria-label="Filtrar lojas por estado" className={styles.statusTabs}>
+            {(
+              [
+                ['all', 'Todos'],
+                ['ATIVA', 'Ativos'],
+                ['PENDENTE', 'Pendentes'],
+                ['INATIVA', 'Inativos'],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                aria-pressed={statusFilter === value}
+                className={statusFilter === value ? styles.statusTabActive : styles.statusTab}
+                key={value}
+                onClick={() => updateFilters(() => setStatusFilter(value))}
+                type="button"
+              >
+                {label}
+                {value === 'PENDENTE' ? <span aria-hidden className={styles.pendingDot} /> : null}
+              </button>
+            ))}
           </div>
 
-          <div className="store-filters">
-            <label className="store-search">
-              <Search aria-hidden size={16} />
-              <input
-                aria-label="Pesquisar lojas"
-                onChange={(event) =>
-                  updateFilters(() => setQuery(event.target.value))
-                }
-                placeholder="Pesquisar por nome, NIF ou contacto"
-                type="search"
-                value={query}
-              />
-            </label>
+          <label className={styles.searchField}>
+            <Search aria-hidden size={14} strokeWidth={1.7} />
+            <input
+              aria-label="Pesquisar lojas"
+              onChange={(event) => updateFilters(() => setQuery(event.target.value))}
+              placeholder="Pesquisar"
+              type="search"
+              value={query}
+            />
+          </label>
+        </div>
 
-            <select
-              aria-label="Filtrar por categoria"
-              onChange={(event) =>
-                updateFilters(() => setCategoryFilter(event.target.value))
-              }
-              value={categoryFilter}
-            >
-              <option value="all">Todas as categorias</option>
-              {categoryOptions.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-
-            <select
-              aria-label="Filtrar por piso"
-              onChange={(event) =>
-                updateFilters(() => setFloorFilter(event.target.value as FloorFilter))
-              }
-              value={floorFilter}
-            >
-              <option value="all">Todos os pisos</option>
-              {floorOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-
-            <select
-              aria-label="Filtrar por estado"
-              onChange={(event) =>
-                updateFilters(() => setStatusFilter(event.target.value as StatusFilter))
-              }
-              value={statusFilter}
-            >
-              <option value="all">Todos os estados</option>
-              <option value="ATIVA">Ativas</option>
-              <option value="INATIVA">Inativas</option>
-            </select>
-          </div>
-
-          <div className="table-scroll">
-            <table className="admin-table stores-table">
-              <thead>
-                <tr>
-                  <th>Loja</th>
-                  <th>Imagem</th>
-                  <th>Categoria</th>
-                  <th>Piso</th>
-                  <th>Estado</th>
-                  <th>Acoes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleLojas.length > 0 ? (
-                  visibleLojas.map((loja) => (
-                    <tr key={loja.id ?? loja.nome}>
-                      <td>
-                        <span className="store-cell">
-                          <StoreImage
-                            id={loja.id}
-                            kind="logo"
-                            name={loja.nome}
-                            version={mediaVersion}
-                          />
-                          <span className="table-title">
-                            <strong>{loja.nome ?? 'Loja sem nome'}</strong>
-                            <span>{loja.nif ? `NIF ${loja.nif}` : loja.telefone ?? 'Sem NIF'}</span>
-                          </span>
-                        </span>
-                      </td>
-                      <td>
+        <div className={styles.tableScroll}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th className={styles.checkboxColumn}>
+                  <input
+                    aria-label="Selecionar lojas desta página"
+                    checked={areAllVisibleSelected}
+                    disabled={visibleStoreIds.length === 0}
+                    onChange={toggleVisibleStores}
+                    type="checkbox"
+                  />
+                </th>
+                <th>Loja</th>
+                <th>Localização</th>
+                <th>Status</th>
+                <th>Descrição</th>
+                <th>Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleLojas.length > 0 ? (
+                visibleLojas.map((loja) => (
+                  <tr
+                    className={loja.id && selectedStoreIds.has(loja.id) ? styles.selectedRow : undefined}
+                    key={loja.id ?? loja.nome}
+                  >
+                    <td className={styles.checkboxColumn}>
+                      <input
+                        aria-label={`Selecionar ${loja.nome ?? 'loja'}`}
+                        checked={loja.id ? selectedStoreIds.has(loja.id) : false}
+                        disabled={!loja.id}
+                        onChange={() => loja.id && toggleStore(loja.id)}
+                        type="checkbox"
+                      />
+                    </td>
+                    <td>
+                      <span className={styles.storeIdentity}>
                         <StoreImage
                           id={loja.id}
-                          kind="image"
+                          kind="logo"
                           name={loja.nome}
                           version={mediaVersion}
                         />
-                      </td>
-                      <td>{loja.categoria ?? '-'}</td>
-                      <td>{formatFloor(loja.piso)}</td>
-                      <td>
-                        <span
-                          className={
-                            loja.estado === 'ATIVA'
-                              ? 'badge badge--success'
-                              : 'badge badge--warning'
-                          }
+                        <span>
+                          <strong>{loja.nome ?? 'Loja sem nome'}</strong>
+                          <small>{loja.categoria ?? 'Sem categoria'}</small>
+                        </span>
+                      </span>
+                    </td>
+                    <td>{formatFloor(loja.piso)}</td>
+                    <td>
+                      <span className={getStatusClassName(loja.estado)}>
+                        {formatStatus(loja.estado)}
+                      </span>
+                    </td>
+                    <td>
+                      <p className={styles.description} title={loja.descricao}>
+                        {loja.descricao || 'Sem descrição registada.'}
+                      </p>
+                    </td>
+                    <td>
+                      <span className={styles.actions}>
+                        <button
+                          disabled={!loja.id || actionId === `edit-${loja.id}`}
+                          onClick={() => void startEditing(loja)}
+                          type="button"
                         >
-                          {loja.estado ?? 'Sem estado'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="table-actions">
-                          <button
-                            aria-label={`Editar ${loja.nome ?? 'loja'}`}
-                            className="table-action"
-                            disabled={!loja.id || actionId === `edit-${loja.id}`}
-                            onClick={() => void startEditing(loja)}
-                            title="Editar loja"
-                            type="button"
-                          >
-                            <Pencil aria-hidden size={15} />
-                            <span>Editar</span>
-                          </button>
-                          <button
-                            aria-label={`Desativar ${loja.nome ?? 'loja'}`}
-                            className="table-action table-action--danger"
-                            disabled={!loja.id || actionId === `deactivate-${loja.id}`}
-                            onClick={() => void handleDeactivate(loja)}
-                            title="Desativar loja"
-                            type="button"
-                          >
-                            <Ban aria-hidden size={15} />
-                            <span>Desativar</span>
-                          </button>
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={6}>
-                      {isLoading
-                        ? 'A carregar lojas...'
-                        : 'Nenhuma loja corresponde aos filtros.'}
+                          <Pencil aria-hidden size={12} />
+                          Editar
+                        </button>
+                        <button
+                          className={styles.dangerAction}
+                          disabled={!loja.id || actionId === `deactivate-${loja.id}`}
+                          onClick={() => void handleDeactivate(loja)}
+                          title="Desativar loja"
+                          type="button"
+                        >
+                          <Ban aria-hidden size={12} />
+                          Eliminar
+                        </button>
+                      </span>
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              ) : (
+                <tr>
+                  <td className={styles.emptyState} colSpan={6}>
+                    {isLoading ? 'A carregar lojas...' : 'Nenhuma loja corresponde aos filtros.'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
+        <div className={styles.pagination}>
           <Pagination
             isLoading={isLoading}
             onPageChange={setPage}
@@ -507,46 +541,80 @@ export function LojasClient() {
             totalItems={filteredLojas.length}
             totalPages={totalPages}
           />
-        </article>
+        </div>
+      </section>
 
-        <article className="panel store-editor">
-          <div className="panel-header">
-            <div>
-              <h2>{editingStoreId ? 'Editar loja' : 'Nova loja'}</h2>
-              <p className="panel-subtitle">
-                {editingStoreId ? `Registo #${editingStoreId}` : 'Novo registo comercial'}
+      {isEditorOpen ? (
+        <div
+          className={styles.modalBackdrop}
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target && !isSubmitting) {
+              resetForm();
+            }
+          }}
+          role="presentation"
+        >
+          <article
+            aria-labelledby="store-editor-title"
+            aria-modal="true"
+            className={styles.modal}
+            role="dialog"
+          >
+            <header className={styles.modalHeader}>
+              <span className={styles.modalTitleIcon}>
+                {editingStoreId ? <Building2 aria-hidden size={19} /> : <Store aria-hidden size={19} />}
+              </span>
+              <div>
+                <h2 id="store-editor-title">
+                  {editingStoreId ? 'Editar loja' : 'Convidar loja'}
+                </h2>
+                <p>{editingStoreId ? `Registo #${editingStoreId}` : 'Novo registo comercial'}</p>
+              </div>
+              <button
+                aria-label="Fechar formulário"
+                className={styles.closeButton}
+                disabled={isSubmitting}
+                onClick={resetForm}
+                type="button"
+              >
+                <X aria-hidden size={19} />
+              </button>
+            </header>
+
+            {message ? (
+              <p className={styles.modalError} role="alert">
+                {message}
               </p>
-            </div>
-            {editingStoreId ? <Building2 aria-hidden size={18} /> : <Store aria-hidden size={18} />}
-          </div>
+            ) : null}
 
-          <div className="store-media-preview">
-            <figure>
-              <StoreImage
-                id={editingStoreId ?? undefined}
-                kind="image"
-                name={form.nome}
-                previewUrl={imagePreviewUrl}
-                size="form"
-                version={mediaVersion}
-              />
-              <figcaption>Imagem principal</figcaption>
-            </figure>
-            <figure>
-              <StoreImage
-                id={editingStoreId ?? undefined}
-                kind="logo"
-                name={form.nome}
-                previewUrl={logoPreviewUrl}
-                size="form"
-                version={mediaVersion}
-              />
-              <figcaption>Logotipo</figcaption>
-            </figure>
-          </div>
+            <div className={styles.modalBody}>
+              <div className="store-media-preview">
+                <figure>
+                  <StoreImage
+                    id={editingStoreId ?? undefined}
+                    kind="image"
+                    name={form.nome}
+                    previewUrl={imagePreviewUrl}
+                    size="form"
+                    version={mediaVersion}
+                  />
+                  <figcaption>Imagem principal</figcaption>
+                </figure>
+                <figure>
+                  <StoreImage
+                    id={editingStoreId ?? undefined}
+                    kind="logo"
+                    name={form.nome}
+                    previewUrl={logoPreviewUrl}
+                    size="form"
+                    version={mediaVersion}
+                  />
+                  <figcaption>Logotipo</figcaption>
+                </figure>
+              </div>
 
-          <form className="admin-form" onSubmit={handleSubmit} ref={formRef}>
-            <div className="form-section-heading">Identificacao</div>
+              <form className="admin-form" onSubmit={handleSubmit} ref={formRef}>
+            <div className="form-section-heading">Identificação</div>
 
             <label>
               Nome comercial
@@ -559,7 +627,7 @@ export function LojasClient() {
             </label>
 
             <label>
-              Razao social
+              Razão social
               <input
                 maxLength={200}
                 onChange={(event) => setForm({ ...form, razaoSocial: event.target.value })}
@@ -617,7 +685,7 @@ export function LojasClient() {
               </label>
 
               <label>
-                Horario
+                Horário
                 <input
                   maxLength={120}
                   onChange={(event) => setForm({ ...form, horario: event.target.value })}
@@ -653,7 +721,7 @@ export function LojasClient() {
             </div>
 
             <label>
-              Endereco
+              Endereço
               <input
                 maxLength={500}
                 onChange={(event) => setForm({ ...form, endereco: event.target.value })}
@@ -662,7 +730,7 @@ export function LojasClient() {
             </label>
 
             <label>
-              Descricao
+              Descrição
               <textarea
                 maxLength={1000}
                 onChange={(event) => setForm({ ...form, descricao: event.target.value })}
@@ -671,7 +739,7 @@ export function LojasClient() {
               />
             </label>
 
-            <div className="form-section-heading">Presenca digital</div>
+            <div className="form-section-heading">Presença digital</div>
 
             <label>
               Instagram
@@ -741,7 +809,7 @@ export function LojasClient() {
                 {isSubmitting
                   ? 'A guardar...'
                   : editingStoreId
-                    ? 'Guardar alteracoes'
+                    ? 'Guardar alterações'
                     : 'Criar loja'}
               </button>
 
@@ -752,9 +820,11 @@ export function LojasClient() {
                 </button>
               ) : null}
             </div>
-          </form>
-        </article>
-      </section>
+              </form>
+            </div>
+          </article>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -799,6 +869,34 @@ function formatFloor(floor: LojaFloor | undefined) {
   return floorOptions.find((option) => option.value === floor)?.label ?? '-';
 }
 
+function formatStatus(status: Loja['estado']) {
+  if (status === 'ATIVA') {
+    return 'Ativo';
+  }
+
+  if (status === 'PENDENTE') {
+    return 'Pendente';
+  }
+
+  if (status === 'INATIVA') {
+    return 'Inativo';
+  }
+
+  return 'Sem estado';
+}
+
+function getStatusClassName(status: Loja['estado']) {
+  if (status === 'ATIVA') {
+    return `${styles.statusBadge} ${styles.statusBadgeActive}`;
+  }
+
+  if (status === 'PENDENTE') {
+    return `${styles.statusBadge} ${styles.statusBadgePending}`;
+  }
+
+  return `${styles.statusBadge} ${styles.statusBadgeInactive}`;
+}
+
 function normalizeText(value: string) {
   return value
     .normalize('NFD')
@@ -812,10 +910,6 @@ function revokePreview(reference: { current: string | null }) {
     URL.revokeObjectURL(reference.current);
     reference.current = null;
   }
-}
-
-function getMessageClassName(message: string) {
-  return message.includes('sucesso') ? 'form-success' : 'form-error';
 }
 
 function getErrorMessage(error: unknown) {
