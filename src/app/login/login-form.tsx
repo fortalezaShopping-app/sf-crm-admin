@@ -1,13 +1,15 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import { LockKeyhole, LogIn, Mail, ShieldCheck } from 'lucide-react';
+import { LockKeyhole, Mail } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import {
   ApiError,
   loginAdminSession,
 } from '@/lib/api';
+
+import styles from './login.module.css';
 
 export function LoginForm() {
   const router = useRouter();
@@ -35,21 +37,23 @@ export function LoginForm() {
   return (
     <form
       action="/api/session/login"
-      className="login-form"
+      className={styles.form}
       method="post"
       onSubmit={handleSubmit}
     >
-      <div className="field">
-        <label htmlFor="email">Email</label>
-        <div className="input-shell">
-          <Mail aria-hidden size={18} strokeWidth={2.2} />
+      <div className={styles.field}>
+        <label className={styles.srOnly} htmlFor="email">
+          Email
+        </label>
+        <div className={styles.inputShell}>
+          <Mail aria-hidden size={17} strokeWidth={1.7} />
           <input
             autoComplete="email"
             id="email"
             inputMode="email"
             name="email"
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="admin@shopping.co.ao"
+            placeholder="Email"
             required
             type="email"
             value={email}
@@ -57,16 +61,18 @@ export function LoginForm() {
         </div>
       </div>
 
-      <div className="field">
-        <label htmlFor="password">Senha</label>
-        <div className="input-shell">
-          <LockKeyhole aria-hidden size={18} strokeWidth={2.2} />
+      <div className={styles.field}>
+        <label className={styles.srOnly} htmlFor="password">
+          Senha
+        </label>
+        <div className={styles.inputShell}>
+          <LockKeyhole aria-hidden size={17} strokeWidth={1.7} />
           <input
             autoComplete="current-password"
             id="password"
             name="password"
             onChange={(event) => setPassword(event.target.value)}
-            placeholder="Digite a senha"
+            placeholder="Senha"
             required
             type="password"
             value={password}
@@ -74,17 +80,19 @@ export function LoginForm() {
         </div>
       </div>
 
-      {error ? <p className="form-error">{error}</p> : null}
+      {error ? (
+        <p className={styles.formError} role="alert">
+          {error}
+        </p>
+      ) : null}
 
-      <button className="primary-button" disabled={isSubmitting} type="submit">
-        <LogIn aria-hidden size={18} strokeWidth={2.4} />
-        {isSubmitting ? 'A entrar...' : 'Entrar'}
+      <button
+        className={styles.submitButton}
+        disabled={isSubmitting}
+        type="submit"
+      >
+        {isSubmitting ? 'A iniciar...' : 'Iniciar sessão'}
       </button>
-
-      <p className="security-note">
-        <ShieldCheck aria-hidden size={18} strokeWidth={2.2} />
-        Sessao protegida por cookie seguro e inacessivel ao JavaScript do navegador.
-      </p>
     </form>
   );
 }

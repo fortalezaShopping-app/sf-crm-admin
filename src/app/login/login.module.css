@@ -1,0 +1,216 @@
+.page {
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  overflow: auto;
+  background: #8b321f;
+  color: #8b321f;
+  padding: 40px 24px;
+}
+
+.loginShell {
+  width: min(100%, 416px);
+}
+
+.panelTitle {
+  margin: 0 0 18px;
+  color: #ffffff;
+  font-family: "Dax Pro", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1;
+  text-align: center;
+}
+
+.card {
+  display: grid;
+  width: 100%;
+  gap: 22px;
+  border-radius: 10px;
+  background: #f3ece8;
+  padding: 40px 60px 46px;
+}
+
+.logo {
+  display: flex;
+  justify-content: center;
+}
+
+.logo :global(.brand-logo--sm) {
+  gap: 6px;
+}
+
+.logo :global(.brand-logo__mark) {
+  width: 25px;
+  height: 25px;
+}
+
+.logo :global(.brand-logo__sun) {
+  top: 5px;
+  left: 5px;
+  width: 15px;
+  height: 15px;
+}
+
+.logo :global(.brand-logo__name) {
+  font-size: 11px;
+  line-height: 13px;
+}
+
+.logo :global(.brand-logo__tagline) {
+  font-size: 4px;
+  letter-spacing: 1px;
+  line-height: 6px;
+}
+
+.header {
+  display: grid;
+  gap: 7px;
+  text-align: center;
+}
+
+.header h2,
+.header p {
+  margin: 0;
+  color: #8b321f;
+  font-family: "Dax Pro", Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0;
+}
+
+.header h2 {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 22px;
+}
+
+.header p {
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 14px;
+}
+
+.form {
+  display: grid;
+  gap: 22px;
+}
+
+.field {
+  min-width: 0;
+}
+
+.inputShell {
+  display: grid;
+  min-height: 46px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #9a3a24;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.16);
+  padding: 0 14px;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.inputShell:focus-within {
+  border-color: #6b2618;
+  box-shadow: 0 0 0 3px rgba(139, 50, 31, 0.12);
+}
+
+.inputShell svg {
+  color: #9a3a24;
+}
+
+.inputShell input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #5c2619;
+  font-family: "Dax Pro", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  padding: 12px 0;
+}
+
+.inputShell input::placeholder {
+  color: #8b321f;
+  opacity: 1;
+}
+
+.submitButton {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 7px;
+  background: #8b321f;
+  color: #ffffff;
+  font-family: "Dax Pro", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+
+.submitButton:hover:not(:disabled) {
+  background: #6b2618;
+}
+
+.submitButton:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.submitButton:focus-visible {
+  outline: 3px solid rgba(243, 111, 50, 0.52);
+  outline-offset: 3px;
+}
+
+.submitButton:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.formError {
+  margin: -8px 0 0;
+  border: 1px solid rgba(180, 35, 24, 0.28);
+  border-radius: 7px;
+  background: rgba(180, 35, 24, 0.07);
+  color: #a1281b;
+  font-size: 11px;
+  line-height: 15px;
+  padding: 9px 10px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .page {
+    padding: 28px 18px;
+  }
+
+  .panelTitle {
+    font-size: 25px;
+  }
+
+  .card {
+    padding: 34px 24px 38px;
+  }
+}
+
+@media (max-height: 560px) {
+  .page {
+    align-items: start;
+    padding-block: 24px;
+  }
+}
