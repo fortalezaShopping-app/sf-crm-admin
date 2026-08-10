@@ -1,5 +1,5 @@
-import { ConfiguracoesClient } from './configuracoes-client';
+import { redirect } from 'next/navigation';
 
 export default function ConfiguracoesPage() {
-  return <ConfiguracoesClient />;
+  redirect('/dashboard/perfil');
 }

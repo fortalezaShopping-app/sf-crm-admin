@@ -1,5 +1,5 @@
-import { RegrasClient } from './regras-client';
+import { redirect } from 'next/navigation';
 
 export default function RegrasPage() {
-  return <RegrasClient />;
+  redirect('/dashboard');
 }

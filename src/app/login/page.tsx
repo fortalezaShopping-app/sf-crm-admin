@@ -1,7 +1,9 @@
+import { redirect } from 'next/navigation';
+
 import { ShoppingLogo } from '@/components/brand/ShoppingLogo';
+import { getAuthenticatedAdminSession } from '@/lib/server-auth';
 
 import { LoginForm } from './login-form';
-import { LoginRedirect } from './login-redirect';
 
 const metrics = [
   { label: 'operacao', value: 'CRM' },
@@ -9,11 +11,13 @@ const metrics = [
   { label: 'API nova', value: 'Online' },
 ];
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  if (await getAuthenticatedAdminSession()) {
+    redirect('/dashboard');
+  }
+
   return (
     <main className="login-page">
-      <LoginRedirect />
-
       <section className="login-intro" aria-label="Resumo do painel">
         <ShoppingLogo />
 

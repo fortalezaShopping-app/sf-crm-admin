@@ -1,45 +1,44 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import { CheckCircle2, ReceiptText, Send, XCircle } from 'lucide-react';
+import { CheckCircle2, ReceiptText, Send } from 'lucide-react';
 
-import { ApiError, validarFatura, type ValidarFaturaRequest } from '@/lib/api';
-import { getAdminSessionSnapshot } from '@/lib/auth';
+import {
+  ApiError,
+  validarFatura,
+  type ValidacaoFatura,
+  type ValidarFaturaRequest,
+} from '@/lib/api';
 
 type FormState = {
-  estado: ValidarFaturaRequest['estado'];
+  decision: ValidarFaturaRequest['decision'];
   faturaId: string;
-  observacao: string;
+  note: string;
 };
 
 const initialFormState: FormState = {
-  estado: 'APROVADA',
+  decision: 'APPROVED',
   faturaId: '',
-  observacao: '',
+  note: '',
 };
 
 export function ComprovativosClient() {
   const [form, setForm] = useState<FormState>(initialFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastValidation, setLastValidation] = useState<ValidacaoFatura | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    const session = getAdminSessionSnapshot();
-
-    if (!session?.token) {
-      return;
-    }
-
     setIsSubmitting(true);
     setMessage(null);
 
     try {
-      await validarFatura(session.token, form.faturaId, {
-        estado: form.estado,
-        observacao: form.observacao || undefined,
+      const validation = await validarFatura(form.faturaId, {
+        decision: form.decision,
+        note: form.note || undefined,
       });
+      setLastValidation(validation);
       setForm(initialFormState);
       setMessage('Fatura validada com sucesso.');
     } catch (error) {
@@ -53,15 +52,10 @@ export function ComprovativosClient() {
     <div className="dashboard-content">
       <section className="dashboard-heading">
         <div className="heading-copy">
-          <p className="eyebrow">Comprovativos</p>
-          <h1>Validacao de faturas</h1>
-          <p>Acompanhe e valide comprovativos submetidos pelos clientes no app mobile.</p>
+          <p className="eyebrow">Faturas</p>
+          <h1>Validacao</h1>
+          <p>Aprove ou rejeite uma fatura submetida no aplicativo.</p>
         </div>
-
-        <span className="status-pill status-pill--danger">
-          <span className="status-dot" />
-          Listagem pendente na API
-        </span>
       </section>
 
       {message ? <p className={getMessageClassName(message)}>{message}</p> : null}
@@ -69,33 +63,7 @@ export function ComprovativosClient() {
       <section className="workspace-grid">
         <article className="panel">
           <div className="panel-header">
-            <h2>Estado atual da integracao</h2>
-            <ReceiptText aria-hidden size={18} />
-          </div>
-
-          <div className="helper-panel">
-            <p>
-              A documentacao atual expoe a rota de validacao por ID, mas ainda nao expoe uma rota
-              para listar faturas pendentes. Por isso deixei este painel pronto para validar um
-              comprovativo especifico assim que tiver o ID vindo da API ou dos testes.
-            </p>
-
-            <div className="quick-list quick-list--compact">
-              <span className="integration-step">
-                <CheckCircle2 aria-hidden size={17} />
-                <strong>PATCH /api/faturas/{'{id}'}/validar</strong>
-              </span>
-              <span className="integration-step">
-                <XCircle aria-hidden size={17} />
-                <strong>GET de listagem ainda nao disponivel</strong>
-              </span>
-            </div>
-          </div>
-        </article>
-
-        <article className="panel">
-          <div className="panel-header">
-            <h2>Validar por ID</h2>
+            <h2>Validar fatura</h2>
             <ReceiptText aria-hidden size={18} />
           </div>
 
@@ -103,6 +71,7 @@ export function ComprovativosClient() {
             <label>
               ID da fatura
               <input
+                inputMode="numeric"
                 onChange={(event) => setForm({ ...form, faturaId: event.target.value })}
                 required
                 value={form.faturaId}
@@ -114,21 +83,21 @@ export function ComprovativosClient() {
                 onChange={(event) =>
                   setForm({
                     ...form,
-                    estado: event.target.value as FormState['estado'],
+                    decision: event.target.value as FormState['decision'],
                   })
                 }
-                value={form.estado}
+                value={form.decision}
               >
-                <option value="APROVADA">Aprovar</option>
-                <option value="REJEITADA">Rejeitar</option>
+                <option value="APPROVED">Aprovar</option>
+                <option value="REJECTED">Rejeitar</option>
               </select>
             </label>
             <label>
-              Observacao
+              Nota
               <textarea
-                onChange={(event) => setForm({ ...form, observacao: event.target.value })}
+                onChange={(event) => setForm({ ...form, note: event.target.value })}
                 rows={4}
-                value={form.observacao}
+                value={form.note}
               />
             </label>
 
@@ -138,9 +107,48 @@ export function ComprovativosClient() {
             </button>
           </form>
         </article>
+
+        <article className="panel">
+          <div className="panel-header">
+            <h2>Ultima validacao</h2>
+            <CheckCircle2 aria-hidden size={18} />
+          </div>
+          <div className="helper-panel">
+            {lastValidation ? (
+              <dl className="detail-list">
+                <div>
+                  <dt>Fatura</dt>
+                  <dd>#{lastValidation.invoiceId ?? '-'}</dd>
+                </div>
+                <div>
+                  <dt>Decisao</dt>
+                  <dd>{formatDecision(lastValidation.decision)}</dd>
+                </div>
+                <div>
+                  <dt>Data</dt>
+                  <dd>{formatDate(lastValidation.validatedAt)}</dd>
+                </div>
+                <div>
+                  <dt>Nota</dt>
+                  <dd>{lastValidation.note ?? '-'}</dd>
+                </div>
+              </dl>
+            ) : (
+              <p>Nenhuma validacao realizada nesta sessao.</p>
+            )}
+          </div>
+        </article>
       </section>
     </div>
   );
+}
+
+function formatDecision(value?: string) {
+  return value === 'APPROVED' ? 'Aprovada' : value === 'REJECTED' ? 'Rejeitada' : value ?? '-';
+}
+
+function formatDate(value?: string) {
+  return value ? new Intl.DateTimeFormat('pt-AO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : '-';
 }
 
 function getErrorMessage(error: unknown) {

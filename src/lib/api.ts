@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from '@/lib/env';
+import type { AdminSession } from '@/lib/admin-session';
 
 export type LoginEmailRequest = {
   email: string;
@@ -6,39 +6,87 @@ export type LoginEmailRequest = {
 };
 
 export type LoginResponse = {
-  token?: string;
-  tipo?: string;
-  nome?: string;
-  role?: string | null;
-  id?: number;
-  lojaId?: number | null;
   email?: string;
+  id?: number;
+  name?: string;
+  token?: string;
 };
 
 export type Loja = {
   id?: number;
   nome?: string;
+  razaoSocial?: string;
   nif?: string;
+  descricao?: string;
+  categoria?: string;
+  piso?: LojaFloor;
+  horario?: string;
   email?: string;
   telefone?: string;
   endereco?: string;
-  nivelAdesao?: number;
+  imageUrl?: string;
+  logoUrl?: string;
+  facebookUrl?: string;
+  instagramUrl?: string;
+  sourceUrl?: string;
   estado?: 'ATIVA' | 'INATIVA';
   createdAt?: string;
   updatedAt?: string;
 };
 
+export type LojaFloor =
+  | 'GROUND_FLOOR'
+  | 'FLOOR_1'
+  | 'FLOOR_2'
+  | 'FLOORS_2_AND_4'
+  | 'FLOOR_3'
+  | 'FLOOR_4'
+  | 'FLOOR_4_TERRACE';
+
 export type LojaRequest = {
   nome: string;
-  nif: string;
+  razaoSocial?: string;
+  nif?: string;
+  categoria: string;
+  piso: LojaFloor;
+  horario: string;
+  telefone: string;
+  descricao?: string;
   email?: string;
-  telefone?: string;
   endereco?: string;
-  nivelAdesao?: number;
+  facebookUrl?: string;
+  instagramUrl?: string;
+  sourceUrl?: string;
 };
 
-export type NivelLojaRequest = {
-  nivelAdesao: number;
+type StoreResponse = {
+  address?: string;
+  category?: string;
+  contact?: string;
+  createdAt?: string;
+  description?: string;
+  email?: string;
+  floor?: LojaFloor;
+  facebookUrl?: string;
+  id?: number;
+  imageUrl?: string;
+  legalName?: string;
+  logoUrl?: string;
+  instagramUrl?: string;
+  name?: string;
+  openingHours?: string;
+  sourceUrl?: string;
+  status?: string;
+  taxId?: string;
+  updatedAt?: string;
+};
+
+type StorePageResponse = {
+  content?: StoreResponse[];
+  number?: number;
+  size?: number;
+  totalElements?: number;
+  totalPages?: number;
 };
 
 export type Utilizador = {
@@ -46,20 +94,22 @@ export type Utilizador = {
   nome?: string;
   email?: string;
   telefone?: string;
+  lojaId?: number | null;
   estado?: 'ATIVO' | 'INATIVO' | 'BLOQUEADO';
-  role?: string;
-  tipo?: string;
+  role?: UserRole;
   ultimoLogin?: string;
   createdAt?: string;
   updatedAt?: string;
 };
+
+export type UserRole = 'ADMIN' | 'CUSTOMER' | 'MANAGER' | 'STORE_USER';
 
 export type UtilizadorRequest = {
   nome: string;
   email: string;
   telefone?: string;
   password: string;
-  role?: 'ADMIN' | 'GESTOR' | 'LOJISTA' | 'CLIENTE' | 'SUPER_ADMIN';
+  role: Exclude<UserRole, 'CUSTOMER'>;
   lojaId?: number;
   cargo?: string;
 };
@@ -70,92 +120,86 @@ export type AtualizarUtilizadorRequest = {
   telefone?: string;
 };
 
-export type Recompensa = {
-  id?: number;
-  nome?: string;
-  descricao?: string;
-  tipo?: 'BRINDE' | 'DESCONTO' | 'CUPAO' | 'SERVICO';
-  pontosNecessarios?: number;
-  stock?: number;
-  estado?: 'ATIVA' | 'INATIVA' | 'ESGOTADA';
+type UserResponse = {
   createdAt?: string;
-  updatedAt?: string;
-};
-
-export type RecompensaRequest = {
-  nome: string;
-  descricao?: string;
-  tipo?: 'BRINDE' | 'DESCONTO' | 'CUPAO' | 'SERVICO';
-  pontosNecessarios: number;
-  stock: number;
-  estado?: 'ATIVA' | 'INATIVA' | 'ESGOTADA';
-};
-
-export type RegraPontuacao = {
+  email?: string;
   id?: number;
-  nome?: string;
-  valorMinimo?: number;
-  valorPorPonto?: number;
-  pontosPorValor?: number;
-  multiplicador?: number;
-  ativo?: boolean;
-  dataInicio?: string;
-  dataFim?: string;
-  prazoSubmissaoDias?: number;
-  validadePontosMeses?: number;
-};
-
-export type RegraPontuacaoRequest = {
-  nome: string;
-  valorMinimo?: number;
-  valorPorPonto?: number;
-  pontosPorValor?: number;
-  multiplicador?: number;
-  ativo?: boolean;
-  dataInicio?: string;
-  dataFim?: string;
-  prazoSubmissaoDias?: number;
-  validadePontosMeses?: number;
+  lastLogin?: string;
+  name?: string;
+  phone?: string;
+  status?: string;
+  updatedAt?: string;
 };
 
 export type ValidarFaturaRequest = {
-  estado: 'APROVADA' | 'REJEITADA';
-  observacao?: string;
+  decision: 'APPROVED' | 'REJECTED';
+  note?: string;
 };
 
-export type Configuracao = {
-  chave?: string;
-  descricao?: string;
+export type ValidacaoFatura = {
   id?: number;
-  updatedAt?: string;
-  valor?: string;
+  invoiceId?: number;
+  validatedByUserId?: number;
+  decision?: string;
+  note?: string;
+  validatedAt?: string;
 };
 
-export type ConfiguracaoRequest = {
-  chave: string;
-  descricao?: string;
-  valor: string;
-};
-
-export type LogAuditoria = {
-  acao?: string;
+export type Profile = {
   createdAt?: string;
-  dadosAnteriores?: string;
-  dadosNovos?: string;
-  entidade?: string;
-  entidadeId?: number;
+  email?: string;
   id?: number;
-  utilizador?: string;
+  lastLogin?: string;
+  name?: string;
+  phone?: string;
+  status?: string;
+  updatedAt?: string;
 };
 
-export type BackofficeRole = 'ADMIN' | 'GESTOR' | 'LOJISTA';
+export type UpdateProfileRequest = {
+  email?: string;
+  name?: string;
+  phone?: string;
+};
 
-type ApiRequestOptions = Omit<RequestInit, 'body'> & {
+export type PageResult<T> = {
+  items: T[];
+  page: number;
+  size: number;
+  totalItems: number;
+  totalPages: number;
+};
+
+export type ListOptions = {
+  page?: number;
+  size?: number;
+};
+
+export type DashboardSummary = {
+  clientesTotal: number;
+  lojasAtivas: number;
+  lojasComImagem: number;
+  lojasRecentes: Loja[];
+  lojasTotal: number;
+  utilizadoresInternosTotal: number;
+};
+
+type ApiRequestOptions = Omit<RequestInit, 'body' | 'cache'> & {
   body?: unknown;
-  token?: string | null;
+  bypassCache?: boolean;
+  cacheTtlMs?: number;
+  sameOrigin?: boolean;
+};
+
+type CacheEntry = {
+  data: unknown;
+  expiresAt: number;
 };
 
 export const ADMIN_AUTH_EXPIRED_EVENT = 'sf-admin-auth-expired';
+const DEFAULT_CACHE_TTL_MS = 20_000;
+const responseCache = new Map<string, CacheEntry>();
+const inFlightRequests = new Map<string, Promise<unknown>>();
 
 export class ApiError extends Error {
   constructor(
@@ -168,238 +212,262 @@ export class ApiError extends Error {
   }
 }
 
-export function adminLogin(payload: LoginEmailRequest) {
-  return apiRequest<LoginResponse>('/api/auth/login', {
+export function loginAdminSession(payload: LoginEmailRequest) {
+  return apiRequest<{ session: AdminSession }>('/api/session/login', {
     body: payload,
+    cacheTtlMs: 0,
     method: 'POST',
+    sameOrigin: true,
   });
 }
 
-export function getMe(token: string) {
-  return apiRequest<LoginResponse>('/api/auth/me', { token });
-}
-
-export function findUtilizadorByEmail(token: string, email: string) {
-  const query = new URLSearchParams({ email });
-
-  return apiRequest<Utilizador>(`/api/utilizadors/search/findByEmailIgnoreCase?${query.toString()}`, {
-    token,
+export function getDashboardSummary(bypassCache = false) {
+  return apiRequest<DashboardSummary>('/api/admin/dashboard/resumo', {
+    bypassCache,
+    sameOrigin: true,
   });
 }
 
-export async function resolveBackofficeRole(token: string, utilizadorId?: number) {
-  if (!utilizadorId) {
-    return null;
-  }
-
-  const roles: BackofficeRole[] = ['ADMIN', 'GESTOR', 'LOJISTA'];
-
-  for (const role of roles) {
-    if (await hasUtilizadorRole(token, utilizadorId, role)) {
-      return role;
-    }
-  }
-
-  return null;
+export function listLojas(options: ListOptions = {}) {
+  const pagination = normalizePagination(options);
+  return apiRequest<StorePageResponse>(
+    `/api/admin/stores${toQueryString(pagination)}`,
+  ).then((data) => ({
+    items: (data.content ?? []).map(toLoja),
+    page: data.number ?? pagination.page,
+    size: data.size ?? pagination.size,
+    totalItems: data.totalElements ?? data.content?.length ?? 0,
+    totalPages: Math.max(1, data.totalPages ?? 1),
+  }));
 }
 
-export async function hasUtilizadorRole(token: string, utilizadorId: number, role: BackofficeRole) {
-  const query = new URLSearchParams({
-    role,
-    utilizadorId: String(utilizadorId),
-  });
+export async function listAllLojas(pageSize = 100) {
+  const firstPage = await listLojas({ page: 0, size: pageSize });
 
-  try {
-    return await apiRequest<boolean>(
-      `/api/utilizadorRoles/search/existsByUtilizadorIdAndRoleNome?${query.toString()}`,
-      { token },
-    );
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 404) {
-      return false;
-    }
-
-    throw error;
+  if (firstPage.totalPages <= 1) {
+    return firstPage.items;
   }
-}
 
-export function listLojas(token: string) {
-  return apiRequest<Loja[] | unknown>('/api/admin/lojas', { token }).then((data) =>
-    getCollection<Loja>(data, 'lojas'),
+  const remainingPages = await Promise.all(
+    Array.from({ length: firstPage.totalPages - 1 }, (_, index) =>
+      listLojas({ page: index + 1, size: pageSize }),
+    ),
   );
+
+  return [firstPage, ...remainingPages].flatMap((result) => result.items);
 }
 
-export function createLoja(token: string, payload: LojaRequest) {
-  return apiRequest<Loja>('/api/admin/lojas', {
-    body: payload,
+export function createLoja(payload: LojaRequest, image: File, logo?: File) {
+  const formData = new FormData();
+  const data = toStoreRequest(payload);
+
+  formData.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }));
+  formData.append('image', image);
+
+  if (logo) {
+    formData.append('logo', logo);
+  }
+
+  return apiRequest<StoreResponse>('/api/admin/stores', {
+    body: formData,
     method: 'POST',
-    token,
-  });
+  }).then(toLoja);
 }
 
-export function updateLojaNivel(token: string, id: number, payload: NivelLojaRequest) {
-  return apiRequest<Record<string, unknown>>(`/api/admin/lojas/${id}`, {
-    body: payload,
-    method: 'PATCH',
-    token,
-  });
+export function getLoja(id: number) {
+  return apiRequest<StoreResponse>(`/api/admin/stores/${id}`).then(toLoja);
 }
 
-export function deactivateLoja(token: string, id: number) {
-  return apiRequest<Record<string, unknown>>(`/api/admin/lojas/${id}`, {
-    method: 'DELETE',
-    token,
-  });
-}
-
-export function listUtilizadores(token: string, role?: string) {
-  const query = role ? `?role=${encodeURIComponent(role)}` : '';
-
-  return apiRequest<Utilizador[] | unknown>(`/api/admin/utilizadores${query}`, { token }).then(
-    (data) => getCollection<Utilizador>(data, 'utilizadors'),
-  );
-}
-
-export function createUtilizador(token: string, payload: UtilizadorRequest) {
-  return apiRequest<Utilizador>('/api/admin/utilizadores', {
-    body: payload,
-    method: 'POST',
-    token,
-  });
-}
-
-export function updateUtilizador(token: string, id: number, payload: AtualizarUtilizadorRequest) {
-  return apiRequest<Utilizador>(`/api/admin/utilizadores/${id}`, {
-    body: payload,
+export function updateLoja(id: number, payload: LojaRequest) {
+  return apiRequest<StoreResponse>(`/api/admin/stores/${id}`, {
+    body: toStoreRequest(payload),
     method: 'PUT',
-    token,
-  });
+  }).then(toLoja);
 }
 
-export function deactivateUtilizador(token: string, id: number) {
-  return apiRequest<Record<string, unknown>>(`/api/admin/utilizadores/${id}`, {
+export function replaceLojaImage(id: number, image: File) {
+  const formData = new FormData();
+  formData.append('image', image);
+
+  return apiRequest<StoreResponse>(`/api/admin/stores/${id}/image`, {
+    body: formData,
+    method: 'PUT',
+  }).then(toLoja);
+}
+
+export function replaceLojaLogo(id: number, logo: File) {
+  const formData = new FormData();
+  formData.append('logo', logo);
+
+  return apiRequest<StoreResponse>(`/api/admin/stores/${id}/logo`, {
+    body: formData,
+    method: 'PUT',
+  }).then(toLoja);
+}
+
+export function getLojaImagePath(id: number, version?: number) {
+  const query = version ? `?v=${version}` : '';
+  return `/api/backend/api/admin/stores/${id}/image${query}`;
+}
+
+export function getLojaLogoPath(id: number, version?: number) {
+  const query = version ? `?v=${version}` : '';
+  return `/api/backend/api/admin/stores/${id}/logo${query}`;
+}
+
+export function deactivateLoja(id: number) {
+  return apiRequest<Record<string, unknown>>(`/api/admin/stores/${id}`, {
     method: 'DELETE',
-    token,
   });
 }
 
-export function listRecompensas(token: string) {
-  return apiRequest<unknown>('/api/recompensas?size=100', { token }).then((data) =>
-    getCollection<Recompensa>(data, 'recompensas'),
-  );
+export function listUtilizadores(role?: UserRole, options: ListOptions = {}) {
+  const pagination = normalizePagination(options);
+  const query = toQueryString({ role });
+
+  return apiRequest<UserResponse[]>(`/api/admin/users${query}`).then((data) => {
+    const items = data.map((user) => toUtilizador(user, role));
+    const start = pagination.page * pagination.size;
+
+    return {
+      items: items.slice(start, start + pagination.size),
+      page: pagination.page,
+      size: pagination.size,
+      totalItems: items.length,
+      totalPages: Math.max(1, Math.ceil(items.length / pagination.size)),
+    };
+  });
 }
 
-export function createRecompensa(token: string, payload: RecompensaRequest) {
-  return apiRequest<Recompensa>('/api/recompensas', {
+export function createUtilizador(payload: UtilizadorRequest) {
+  return apiRequest<UserResponse>('/api/admin/users', {
     body: {
-      ...payload,
-      estado: payload.estado ?? 'ATIVA',
-      tipo: payload.tipo ?? 'BRINDE',
+      email: payload.email,
+      jobTitle: payload.cargo,
+      name: payload.nome,
+      password: payload.password,
+      phone: payload.telefone,
+      role: payload.role,
+      storeId: payload.lojaId,
     },
     method: 'POST',
-    token,
-  });
+  }).then((user) => toUtilizador(user, payload.role));
 }
 
-export function deleteRecompensa(token: string, id: number) {
-  return apiRequest<void>(`/api/recompensas/${id}`, {
-    method: 'DELETE',
-    token,
-  });
-}
-
-export function listRegrasPontuacao(token: string) {
-  return apiRequest<unknown>('/api/regraPontuacaos?size=100', { token }).then((data) =>
-    getCollection<RegraPontuacao>(data, 'regraPontuacaos'),
-  );
-}
-
-export function createRegraPontuacao(token: string, payload: RegraPontuacaoRequest) {
-  return apiRequest<RegraPontuacao>('/api/regraPontuacaos', {
+export function updateUtilizador(id: number, payload: AtualizarUtilizadorRequest) {
+  return apiRequest<UserResponse>(`/api/admin/users/${id}`, {
     body: {
-      ativo: payload.ativo ?? true,
-      multiplicador: payload.multiplicador ?? 1,
-      pontosPorValor: payload.pontosPorValor ?? 1,
-      prazoSubmissaoDias: payload.prazoSubmissaoDias ?? 7,
-      validadePontosMeses: payload.validadePontosMeses ?? 12,
-      valorMinimo: payload.valorMinimo ?? 0,
-      valorPorPonto: payload.valorPorPonto ?? 1000,
-      nome: payload.nome,
-      dataInicio: payload.dataInicio,
-      dataFim: payload.dataFim,
+      email: payload.email,
+      name: payload.nome,
+      phone: payload.telefone,
     },
-    method: 'POST',
-    token,
-  });
+    method: 'PUT',
+  }).then(toUtilizador);
 }
 
-export function deleteRegraPontuacao(token: string, id: number) {
-  return apiRequest<void>(`/api/regraPontuacaos/${id}`, {
+export function deactivateUtilizador(id: number) {
+  return apiRequest<UserResponse>(`/api/admin/users/${id}`, {
     method: 'DELETE',
-    token,
+  }).then(toUtilizador);
+}
+
+export function associateUtilizadorLoja(userId: number, storeId: number, jobTitle?: string) {
+  return apiRequest<void>(`/api/admin/stores/${storeId}/users`, {
+    body: { jobTitle, userId },
+    method: 'POST',
   });
 }
 
-export function validarFatura(token: string, id: string, payload: ValidarFaturaRequest) {
-  return apiRequest<Record<string, unknown>>(`/api/faturas/${encodeURIComponent(id)}/validar`, {
+export function validarFatura(id: string, payload: ValidarFaturaRequest) {
+  return apiRequest<ValidacaoFatura>(`/api/invoices/${encodeURIComponent(id)}/validation`, {
     body: payload,
     method: 'PATCH',
-    token,
   });
 }
 
-export function listConfiguracoes(token: string) {
-  return apiRequest<unknown>('/api/configuracaos?size=100', { token }).then((data) =>
-    getCollection<Configuracao>(data, 'configuracaos'),
-  );
+export function getProfile() {
+  return apiRequest<Profile>('/api/auth/profile');
 }
 
-export function createConfiguracao(token: string, payload: ConfiguracaoRequest) {
-  return apiRequest<Configuracao>('/api/configuracaos', {
-    body: payload,
-    method: 'POST',
-    token,
-  });
-}
-
-export function updateConfiguracao(token: string, id: number, payload: ConfiguracaoRequest) {
-  return apiRequest<Configuracao>(`/api/configuracaos/${id}`, {
+export function updateProfile(payload: UpdateProfileRequest) {
+  return apiRequest<Profile>('/api/auth/profile', {
     body: payload,
     method: 'PUT',
-    token,
   });
 }
 
-export function deleteConfiguracao(token: string, id: number) {
-  return apiRequest<void>(`/api/configuracaos/${id}`, {
-    method: 'DELETE',
-    token,
-  });
-}
-
-export function listLogsAuditoria(token: string) {
-  return apiRequest<unknown>('/api/logAuditorias?size=50&sort=createdAt,desc', { token }).then(
-    (data) => getCollection<LogAuditoria>(data, 'logAuditorias'),
-  );
+export function clearAdminApiCache() {
+  responseCache.clear();
+  inFlightRequests.clear();
 }
 
 export async function apiRequest<T>(
   path: string,
-  { body, headers, token, ...options }: ApiRequestOptions = {},
+  {
+    body,
+    bypassCache = false,
+    cacheTtlMs = DEFAULT_CACHE_TTL_MS,
+    headers,
+    sameOrigin = false,
+    ...options
+  }: ApiRequestOptions = {},
 ): Promise<T> {
+  const method = (options.method ?? 'GET').toUpperCase();
+  const url = toApiUrl(path, sameOrigin);
+  const canCache = typeof window !== 'undefined' && method === 'GET' && cacheTtlMs > 0;
+
+  if (canCache && !bypassCache) {
+    const cached = responseCache.get(url);
+
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data as T;
+    }
+
+    const inFlight = inFlightRequests.get(url);
+
+    if (inFlight) {
+      return inFlight as Promise<T>;
+    }
+  }
+
+  const request = executeApiRequest<T>(url, method, body, headers, options).then((data) => {
+    if (canCache) {
+      responseCache.set(url, { data, expiresAt: Date.now() + cacheTtlMs });
+    } else if (method !== 'GET') {
+      clearAdminApiCache();
+    }
+
+    return data;
+  });
+
+  if (canCache) {
+    inFlightRequests.set(url, request);
+    void request.then(
+      () => inFlightRequests.delete(url),
+      () => inFlightRequests.delete(url),
+    );
+  }
+
+  return request;
+}
+
+async function executeApiRequest<T>(
+  url: string,
+  method: string,
+  body: unknown,
+  headers: HeadersInit | undefined,
+  options: Omit<RequestInit, 'body' | 'headers' | 'method'>,
+) {
   const requestHeaders = new Headers(headers);
   requestHeaders.set('Accept', 'application/hal+json, application/json');
 
   const requestBody = buildRequestBody(body, requestHeaders);
-
-  if (token) {
-    requestHeaders.set('Authorization', `Bearer ${token}`);
-  }
-
-  const response = await fetch(toApiUrl(path), {
+  const response = await fetch(url, {
     ...options,
     body: requestBody,
+    credentials: 'same-origin',
     headers: requestHeaders,
+    method,
   });
   const data = await readResponseBody(response);
 
@@ -424,16 +492,18 @@ function buildRequestBody(body: unknown, headers: Headers) {
   return JSON.stringify(body);
 }
 
-function toApiUrl(path: string) {
+function toApiUrl(path: string, sameOrigin: boolean) {
   if (path.startsWith('http')) {
     return path;
   }
 
-  if (typeof window !== 'undefined') {
-    return `/api/backend${path.startsWith('/') ? path : `/${path}`}`;
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
+  if (sameOrigin) {
+    return normalizedPath;
   }
 
-  return `${getApiBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`;
+  return `/api/backend${normalizedPath}`;
 }
 
 async function readResponseBody(response: Response) {
@@ -459,7 +529,7 @@ function getErrorMessage(data: unknown, status: number) {
 }
 
 function emitAuthExpired(status: number) {
-  if (typeof window === 'undefined' || (status !== 401 && status !== 403)) {
+  if (typeof window === 'undefined' || status !== 401) {
     return;
   }
 
@@ -478,20 +548,81 @@ function isErrorShape(
   );
 }
 
-function getCollection<T>(data: unknown, embeddedKey: string): T[] {
-  if (Array.isArray(data)) {
-    return data as T[];
-  }
-
-  if (!isRecord(data) || !isRecord(data._embedded)) {
-    return [];
-  }
-
-  const value = data._embedded[embeddedKey];
-
-  return Array.isArray(value) ? (value as T[]) : [];
+function toLoja(store: StoreResponse): Loja {
+  return {
+    categoria: store.category,
+    createdAt: store.createdAt,
+    descricao: store.description,
+    email: store.email,
+    endereco: store.address,
+    estado: store.status?.toUpperCase() === 'ACTIVE' ? 'ATIVA' : 'INATIVA',
+    facebookUrl: store.facebookUrl,
+    horario: store.openingHours,
+    id: store.id,
+    imageUrl: store.imageUrl,
+    instagramUrl: store.instagramUrl,
+    nome: store.name,
+    nif: store.taxId,
+    piso: store.floor,
+    razaoSocial: store.legalName,
+    logoUrl: store.logoUrl,
+    sourceUrl: store.sourceUrl,
+    telefone: store.contact,
+    updatedAt: store.updatedAt,
+  };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+function toStoreRequest(payload: LojaRequest) {
+  return {
+    address: payload.endereco,
+    category: payload.categoria,
+    contact: payload.telefone,
+    description: payload.descricao,
+    email: payload.email,
+    facebookUrl: payload.facebookUrl,
+    floor: payload.piso,
+    instagramUrl: payload.instagramUrl,
+    legalName: payload.razaoSocial,
+    name: payload.nome,
+    openingHours: payload.horario,
+    sourceUrl: payload.sourceUrl,
+    taxId: payload.nif,
+  };
+}
+
+function toUtilizador(user: UserResponse, role?: UserRole): Utilizador {
+  const status = user.status?.toUpperCase();
+
+  return {
+    createdAt: user.createdAt,
+    email: user.email,
+    estado:
+      status === 'ACTIVE' ? 'ATIVO' : status === 'BLOCKED' ? 'BLOQUEADO' : 'INATIVO',
+    id: user.id,
+    nome: user.name,
+    role,
+    telefone: user.phone,
+    ultimoLogin: user.lastLogin,
+    updatedAt: user.updatedAt,
+  };
+}
+
+function normalizePagination(options: ListOptions): Required<ListOptions> {
+  return {
+    page: Math.max(0, options.page ?? 0),
+    size: Math.min(100, Math.max(1, options.size ?? 10)),
+  };
+}
+
+function toQueryString(values: Record<string, string | number | undefined>) {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(values).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+
+  const query = searchParams.toString();
+  return query ? `?${query}` : '';
 }

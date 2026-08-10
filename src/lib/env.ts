@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE_URL = 'https://187-127-227-251.sslip.io';
+const DEFAULT_API_BASE_URL = 'https://api-demo.2-25-89-57.sslip.io';
 
 export function getApiBaseUrl() {
   const apiUrl = withoutTrailingSlash(

@@ -1,21 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Gift, Store, Trophy, Users, WalletCards } from 'lucide-react';
+import { ImageIcon, Store, UserCog, Users, WalletCards } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import Link from 'next/link';
 
+import { StoreImage } from '@/components/admin/StoreImage';
 import {
   ApiError,
-  listLojas,
-  listRecompensas,
-  listRegrasPontuacao,
-  listUtilizadores,
+  getDashboardSummary,
+  type DashboardSummary,
   type Loja,
-  type Recompensa,
-  type RegraPontuacao,
-  type Utilizador,
 } from '@/lib/api';
-import { getAdminSessionSnapshot } from '@/lib/auth';
 
 type StatItem = {
   change: string;
@@ -25,47 +21,27 @@ type StatItem = {
 };
 
 type DashboardState = {
-  clientes: Utilizador[];
   error: string | null;
   isLoading: boolean;
-  lojas: Loja[];
-  recompensas: Recompensa[];
-  regras: RegraPontuacao[];
+  summary: DashboardSummary | null;
 };
 
 export function DashboardClient() {
   const [state, setState] = useState<DashboardState>({
-    clientes: [],
     error: null,
     isLoading: true,
-    lojas: [],
-    recompensas: [],
-    regras: [],
+    summary: null,
   });
 
   useEffect(() => {
     let isMounted = true;
-    const session = getAdminSessionSnapshot();
-
-    if (!session?.token) {
-      return;
-    }
-
-    Promise.all([
-      listLojas(session.token),
-      listUtilizadores(session.token, 'CLIENTE'),
-      listRecompensas(session.token),
-      listRegrasPontuacao(session.token),
-    ])
-      .then(([lojas, clientes, recompensas, regras]) => {
+    getDashboardSummary()
+      .then((summary) => {
         if (isMounted) {
           setState({
-            clientes,
             error: null,
             isLoading: false,
-            lojas,
-            recompensas,
-            regras,
+            summary,
           });
         }
       })
@@ -87,34 +63,34 @@ export function DashboardClient() {
   const stats = useMemo<StatItem[]>(
     () => [
       {
-        change: `${state.lojas.filter((loja) => loja.estado === 'ATIVA').length} ativas`,
+        change: `${state.summary?.lojasAtivas ?? 0} ativas`,
         icon: Store,
         label: 'Lojas',
-        value: formatCount(state.lojas.length),
+        value: formatCount(state.summary?.lojasTotal ?? 0),
       },
       {
         change: 'Registados no mobile',
         icon: Users,
         label: 'Clientes',
-        value: formatCount(state.clientes.length),
+        value: formatCount(state.summary?.clientesTotal ?? 0),
       },
       {
-        change: `${state.recompensas.filter((item) => item.estado === 'ATIVA').length} ativas`,
-        icon: Gift,
-        label: 'Recompensas',
-        value: formatCount(state.recompensas.length),
+        change: 'Equipa com acesso ao painel',
+        icon: UserCog,
+        label: 'Utilizadores internos',
+        value: formatCount(state.summary?.utilizadoresInternosTotal ?? 0),
       },
       {
-        change: `${state.regras.filter((regra) => regra.ativo).length} ativas`,
-        icon: Trophy,
-        label: 'Regras de pontos',
-        value: formatCount(state.regras.length),
+        change: 'Disponiveis no diretorio',
+        icon: ImageIcon,
+        label: 'Imagens de lojas',
+        value: formatCount(state.summary?.lojasComImagem ?? 0),
       },
     ],
     [state],
   );
 
-  const recentStores = state.lojas.slice(0, 5);
+  const recentStores = state.summary?.lojasRecentes ?? [];
 
   return (
     <div className="dashboard-content">
@@ -156,15 +132,15 @@ export function DashboardClient() {
         <article className="panel">
           <div className="panel-header">
             <h2>Lojas recentes</h2>
-            <a href="/dashboard/lojas">Gerir lojas</a>
+            <Link href="/dashboard/lojas">Gerir lojas</Link>
           </div>
 
           <table className="admin-table">
             <thead>
               <tr>
                 <th>Loja</th>
-                <th>NIF</th>
-                <th>Telefone</th>
+                <th>Categoria</th>
+                <th>Piso</th>
                 <th>Estado</th>
               </tr>
             </thead>
@@ -173,13 +149,16 @@ export function DashboardClient() {
                 recentStores.map((loja) => (
                   <tr key={loja.id ?? loja.nome}>
                     <td>
-                      <span className="table-title">
-                        <strong>{loja.nome ?? 'Loja sem nome'}</strong>
-                        <span>{loja.email ?? loja.endereco ?? 'Sem contacto'}</span>
+                      <span className="store-cell">
+                        <StoreImage id={loja.id} name={loja.nome} />
+                        <span className="table-title">
+                          <strong>{loja.nome ?? 'Loja sem nome'}</strong>
+                          <span>{loja.email ?? loja.endereco ?? 'Sem contacto'}</span>
+                        </span>
                       </span>
                     </td>
-                    <td>{loja.nif ?? '-'}</td>
-                    <td>{loja.telefone ?? '-'}</td>
+                    <td>{loja.categoria ?? '-'}</td>
+                    <td>{formatFloor(loja.piso)}</td>
                     <td>
                       <span
                         className={
@@ -215,10 +194,10 @@ export function DashboardClient() {
               text="Criar ou atualizar informacoes comerciais."
             />
             <QuickAction
-              href="/dashboard/regras"
-              icon={Trophy}
-              label="Regras de pontos"
-              text="Configurar campanhas e pontuacao."
+              href="/dashboard/utilizadores"
+              icon={UserCog}
+              label="Novo utilizador"
+              text="Criar acessos para a equipa e para as lojas."
             />
             <QuickAction
               href="/dashboard/comprovativos"
@@ -245,7 +224,7 @@ function QuickAction({
   text: string;
 }) {
   return (
-    <a className="quick-action" href={href}>
+    <Link className="quick-action" href={href}>
       <span className="quick-action__icon">
         <Icon aria-hidden size={18} strokeWidth={2.2} />
       </span>
@@ -253,12 +232,26 @@ function QuickAction({
         <strong>{label}</strong>
         <span>{text}</span>
       </span>
-    </a>
+    </Link>
   );
 }
 
 function formatCount(value: number) {
   return new Intl.NumberFormat('pt-AO').format(value);
+}
+
+function formatFloor(floor: Loja['piso']) {
+  const labels: Record<NonNullable<Loja['piso']>, string> = {
+    FLOOR_1: 'Piso 1',
+    FLOOR_2: 'Piso 2',
+    FLOOR_3: 'Piso 3',
+    FLOOR_4: 'Piso 4',
+    FLOOR_4_TERRACE: 'Terraco do piso 4',
+    FLOORS_2_AND_4: 'Pisos 2 e 4',
+    GROUND_FLOOR: 'Res do chao',
+  };
+
+  return floor ? labels[floor] : '-';
 }
 
 function getErrorMessage(error: unknown) {

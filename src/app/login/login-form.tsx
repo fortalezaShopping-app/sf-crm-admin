@@ -6,12 +6,8 @@ import { useRouter } from 'next/navigation';
 
 import {
   ApiError,
-  adminLogin,
-  findUtilizadorByEmail,
-  getMe,
-  resolveBackofficeRole,
+  loginAdminSession,
 } from '@/lib/api';
-import { createAdminSession, saveAdminSession } from '@/lib/auth';
 
 export function LoginForm() {
   const router = useRouter();
@@ -26,25 +22,7 @@ export function LoginForm() {
     setIsSubmitting(true);
 
     try {
-      const response = await adminLogin({ email, password });
-
-      if (!response.token) {
-        throw new Error('A API respondeu sem token.');
-      }
-
-      const currentUser = await getMe(response.token);
-      const userDetails = currentUser.id
-        ? currentUser
-        : await findUtilizadorByEmail(response.token, currentUser.email ?? email).catch(
-            () => currentUser,
-          );
-      const resolvedRole = await resolveBackofficeRole(response.token, userDetails.id);
-      const session = createAdminSession(response, {
-        ...userDetails,
-        role: userDetails.role ?? resolvedRole,
-      });
-
-      saveAdminSession(session);
+      await loginAdminSession({ email, password });
       router.replace('/dashboard');
       router.refresh();
     } catch (loginError) {
@@ -55,7 +33,12 @@ export function LoginForm() {
   }
 
   return (
-    <form className="login-form" onSubmit={handleSubmit}>
+    <form
+      action="/api/session/login"
+      className="login-form"
+      method="post"
+      onSubmit={handleSubmit}
+    >
       <div className="field">
         <label htmlFor="email">Email</label>
         <div className="input-shell">
@@ -100,7 +83,7 @@ export function LoginForm() {
 
       <p className="security-note">
         <ShieldCheck aria-hidden size={18} strokeWidth={2.2} />
-        Sessao guardada no navegador para acelerar o desenvolvimento inicial.
+        Sessao protegida por cookie seguro e inacessivel ao JavaScript do navegador.
       </p>
     </form>
   );

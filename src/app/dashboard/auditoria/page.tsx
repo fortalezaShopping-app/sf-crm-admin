@@ -1,5 +1,5 @@
-import { AuditoriaClient } from './auditoria-client';
+import { redirect } from 'next/navigation';
 
 export default function AuditoriaPage() {
-  return <AuditoriaClient />;
+  redirect('/dashboard');
 }

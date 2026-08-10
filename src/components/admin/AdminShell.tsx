@@ -1,37 +1,23 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
-  Bell,
-  Gift,
-  History,
   LayoutDashboard,
   LogOut,
   ReceiptText,
   Search,
-  Settings,
   Store,
-  Trophy,
   UserCog,
+  UserRound,
   Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
 import { ShoppingLogo } from '@/components/brand/ShoppingLogo';
-import {
-  ADMIN_AUTH_EXPIRED_EVENT,
-  ApiError,
-  getMe,
-} from '@/lib/api';
-import {
-  clearAdminSession,
-  createAdminSession,
-  getAdminSessionSnapshot,
-  saveAdminSession,
-  subscribeAdminSession,
-  type AdminSession,
-} from '@/lib/auth';
+import type { AdminSession } from '@/lib/admin-session';
+import { ADMIN_AUTH_EXPIRED_EVENT } from '@/lib/api';
 
 type NavItem = {
   href: string;
@@ -41,68 +27,28 @@ type NavItem = {
 
 type AdminShellProps = {
   children: React.ReactNode;
+  initialSession: AdminSession;
 };
 
 const navItems: NavItem[] = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/dashboard/lojas', icon: Store, label: 'Lojas' },
   { href: '/dashboard/clientes', icon: Users, label: 'Clientes' },
-  { href: '/dashboard/comprovativos', icon: ReceiptText, label: 'Faturas' },
-  { href: '/dashboard/recompensas', icon: Gift, label: 'Recompensas' },
-  { href: '/dashboard/regras', icon: Trophy, label: 'Regras' },
   { href: '/dashboard/utilizadores', icon: UserCog, label: 'Utilizadores' },
-  { href: '/dashboard/configuracoes', icon: Settings, label: 'Configuracoes' },
-  { href: '/dashboard/auditoria', icon: History, label: 'Auditoria' },
+  { href: '/dashboard/comprovativos', icon: ReceiptText, label: 'Faturas' },
+  { href: '/dashboard/perfil', icon: UserRound, label: 'Perfil' },
 ];
 
-export function AdminShell({ children }: AdminShellProps) {
+export function AdminShell({ children, initialSession: session }: AdminShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [search, setSearch] = useState('');
-  const session = useSyncExternalStore(
-    subscribeAdminSession,
-    getAdminSessionSnapshot,
-    getServerSessionSnapshot,
-  );
 
   useEffect(() => {
-    const currentSession = getAdminSessionSnapshot();
-
-    if (!currentSession) {
+    async function handleAuthExpired() {
+      await fetch('/api/session/logout', { method: 'POST' }).catch(() => undefined);
       router.replace('/login');
-      return;
-    }
-
-    let isMounted = true;
-
-    getMe(currentSession.token)
-      .then((currentUser) => {
-        if (!isMounted) {
-          return;
-        }
-
-        saveAdminSession(createAdminSession(currentSession, currentUser));
-      })
-      .catch((error: unknown) => {
-        if (!isMounted) {
-          return;
-        }
-
-        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-          clearAdminSession();
-          router.replace('/login');
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [router, session?.token]);
-
-  useEffect(() => {
-    function handleAuthExpired() {
-      clearAdminSession();
-      router.replace('/login');
+      router.refresh();
     }
 
     window.addEventListener(ADMIN_AUTH_EXPIRED_EVENT, handleAuthExpired);
@@ -113,7 +59,7 @@ export function AdminShell({ children }: AdminShellProps) {
   }, [router]);
 
   const initials = useMemo(() => {
-    const source = session?.nome ?? session?.email ?? 'Admin';
+    const source = session.nome ?? session.email ?? 'Admin';
     return source
       .split(' ')
       .filter(Boolean)
@@ -121,11 +67,12 @@ export function AdminShell({ children }: AdminShellProps) {
       .map((part) => part[0])
       .join('')
       .toUpperCase();
-  }, [session]);
+  }, [session.email, session.nome]);
 
-  function handleSignOut() {
-    clearAdminSession();
+  async function handleSignOut() {
+    await fetch('/api/session/logout', { method: 'POST' }).catch(() => undefined);
     router.replace('/login');
+    router.refresh();
   }
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
@@ -137,10 +84,6 @@ export function AdminShell({ children }: AdminShellProps) {
       router.push(target);
       setSearch('');
     }
-  }
-
-  if (!session) {
-    return <main className="dashboard-loading">A validar sessao...</main>;
   }
 
   return (
@@ -155,14 +98,14 @@ export function AdminShell({ children }: AdminShellProps) {
               item.href === '/dashboard' ? pathname === item.href : pathname.startsWith(item.href);
 
             return (
-              <a
+              <Link
                 className={isActive ? 'nav-link nav-link--active' : 'nav-link'}
                 href={item.href}
                 key={item.href}
               >
                 <Icon aria-hidden size={19} strokeWidth={2.2} />
                 <span>{item.label}</span>
-              </a>
+              </Link>
             );
           })}
         </nav>
@@ -172,11 +115,11 @@ export function AdminShell({ children }: AdminShellProps) {
             <span className="avatar">{initials}</span>
             <span>
               <strong>{session.nome ?? 'Administrador'}</strong>
-              <span>{session.role ?? session.tipo ?? 'Admin'}</span>
+              <span>{session.role}</span>
             </span>
           </div>
 
-          <button className="ghost-button" onClick={handleSignOut} type="button">
+          <button className="ghost-button" onClick={() => void handleSignOut()} type="button">
             <LogOut aria-hidden size={17} strokeWidth={2.2} />
             Sair
           </button>
@@ -200,12 +143,12 @@ export function AdminShell({ children }: AdminShellProps) {
           </form>
 
           <div className="topbar-actions">
-            <a aria-label="Auditoria" className="icon-button" href="/dashboard/auditoria">
-              <Bell aria-hidden size={18} strokeWidth={2.2} />
-            </a>
-            <a className="ghost-button" href="/dashboard/lojas">
+            <Link aria-label="Perfil" className="icon-button" href="/dashboard/perfil">
+              <UserRound aria-hidden size={18} strokeWidth={2.2} />
+            </Link>
+            <Link className="ghost-button" href="/dashboard/lojas">
               Novo cadastro
-            </a>
+            </Link>
           </div>
         </header>
 
@@ -234,29 +177,13 @@ function getSearchTarget(query: string) {
     return '/dashboard/comprovativos';
   }
 
-  if (value.includes('recompensa') || value.includes('benef')) {
-    return '/dashboard/recompensas';
-  }
-
-  if (value.includes('regra') || value.includes('ponto')) {
-    return '/dashboard/regras';
-  }
-
   if (value.includes('utilizador') || value.includes('admin')) {
     return '/dashboard/utilizadores';
   }
 
-  if (value.includes('config')) {
-    return '/dashboard/configuracoes';
-  }
-
-  if (value.includes('auditoria') || value.includes('log')) {
-    return '/dashboard/auditoria';
+  if (value.includes('perfil') || value.includes('conta')) {
+    return '/dashboard/perfil';
   }
 
   return '/dashboard';
-}
-
-function getServerSessionSnapshot(): AdminSession | null {
-  return null;
 }

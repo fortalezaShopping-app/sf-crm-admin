@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "import:stores": "node scripts/import-stores.mjs",
     "start": "next start",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
