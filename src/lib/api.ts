@@ -127,8 +127,17 @@ type UserResponse = {
   lastLogin?: string;
   name?: string;
   phone?: string;
+  roles?: string[];
   status?: string;
   updatedAt?: string;
+};
+
+type UserPageResponse = {
+  content?: UserResponse[];
+  number?: number;
+  size?: number;
+  totalElements?: number;
+  totalPages?: number;
 };
 
 export type ValidarFaturaRequest = {
@@ -339,18 +348,30 @@ export function deactivateLoja(id: number) {
 
 export function listUtilizadores(role?: UserRole, options: ListOptions = {}) {
   const pagination = normalizePagination(options);
-  const query = toQueryString({ role });
+  const query = toQueryString({ ...pagination, role });
 
-  return apiRequest<UserResponse[]>(`/api/admin/users${query}`).then((data) => {
-    const items = data.map((user) => toUtilizador(user, role));
-    const start = pagination.page * pagination.size;
+  return apiRequest<UserPageResponse | UserResponse[]>(`/api/admin/users${query}`).then((data) => {
+    if (Array.isArray(data)) {
+      const items = data.map((user) => toUtilizador(user, role));
+      const start = pagination.page * pagination.size;
+
+      return {
+        items: items.slice(start, start + pagination.size),
+        page: pagination.page,
+        size: pagination.size,
+        totalItems: items.length,
+        totalPages: Math.max(1, Math.ceil(items.length / pagination.size)),
+      };
+    }
+
+    const content = Array.isArray(data.content) ? data.content : [];
 
     return {
-      items: items.slice(start, start + pagination.size),
-      page: pagination.page,
-      size: pagination.size,
-      totalItems: items.length,
-      totalPages: Math.max(1, Math.ceil(items.length / pagination.size)),
+      items: content.map((user) => toUtilizador(user, role)),
+      page: data.number ?? pagination.page,
+      size: data.size ?? pagination.size,
+      totalItems: data.totalElements ?? content.length,
+      totalPages: Math.max(1, data.totalPages ?? 1),
     };
   });
 }
@@ -615,6 +636,7 @@ function toStoreRequest(payload: LojaRequest) {
 
 function toUtilizador(user: UserResponse, role?: UserRole): Utilizador {
   const status = user.status?.toUpperCase();
+  const resolvedRole = role ?? user.roles?.find(isUserRole);
 
   return {
     createdAt: user.createdAt,
@@ -623,11 +645,15 @@ function toUtilizador(user: UserResponse, role?: UserRole): Utilizador {
       status === 'ACTIVE' ? 'ATIVO' : status === 'BLOCKED' ? 'BLOQUEADO' : 'INATIVO',
     id: user.id,
     nome: user.name,
-    role,
+    role: resolvedRole,
     telefone: user.phone,
     ultimoLogin: user.lastLogin,
     updatedAt: user.updatedAt,
   };
+}
+
+function isUserRole(role: string): role is UserRole {
+  return role === 'ADMIN' || role === 'CUSTOMER' || role === 'MANAGER' || role === 'STORE_USER';
 }
 
 function normalizePagination(options: ListOptions): Required<ListOptions> {
