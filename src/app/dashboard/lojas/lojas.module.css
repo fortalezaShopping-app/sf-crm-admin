@@ -350,15 +350,27 @@
   color: #775f56;
 }
 
-.description {
-  display: -webkit-box;
-  overflow: hidden;
-  margin: 0;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  color: #4e3027;
+.detailAction {
+  border: 0;
+  background: transparent;
+  color: #8b321f;
+  font-family: inherit;
   font-size: 11px;
-  line-height: 14px;
+  font-weight: 400;
+  line-height: 16px;
+  padding: 4px 0;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 2px;
+}
+
+.detailAction:hover:not(:disabled) {
+  text-decoration-color: currentColor;
+}
+
+.detailAction:disabled {
+  cursor: wait;
+  opacity: 0.55;
 }
 
 .actions {

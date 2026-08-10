@@ -6,6 +6,7 @@ import {
   Bell,
   FileText,
   Gift,
+  LayoutDashboard,
   LogOut,
   Search,
   Settings,
@@ -34,10 +35,11 @@ type AdminShellProps = {
 };
 
 const navItems: NavItem[] = [
-  { href: '/dashboard/lojas', icon: Store, label: 'Lojistas' },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/dashboard/lojas', icon: Store, label: 'Lojas' },
   { href: '/dashboard/comprovativos', icon: FileText, label: 'Talões' },
   { href: '/dashboard/recompensas', icon: Gift, label: 'Recompensas' },
-  { href: '/dashboard', icon: BarChart3, label: 'Analytics' },
+  { href: '/dashboard/analytics', icon: BarChart3, label: 'Analytics' },
   { href: '/dashboard/auditoria', icon: Bell, label: 'Notificações' },
   { href: '/dashboard/utilizadores', icon: Users, label: 'Utilizadores' },
 ];
@@ -166,6 +168,10 @@ function getSearchTarget(query: string) {
 
   if (value.includes('loja')) {
     return '/dashboard/lojas';
+  }
+
+  if (value.includes('analytics') || value.includes('desempenho')) {
+    return '/dashboard/analytics';
   }
 
   if (value.includes('cliente')) {

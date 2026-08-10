@@ -430,7 +430,7 @@ export function LojasClient() {
             <input
               aria-label="Pesquisar lojas"
               onChange={(event) => updateFilters(() => setQuery(event.target.value))}
-              placeholder="Pesquisar"
+              placeholder="Pesquisar lojas"
               type="search"
               value={query}
             />
@@ -494,9 +494,15 @@ export function LojasClient() {
                       </span>
                     </td>
                     <td>
-                      <p className={styles.description} title={loja.descricao}>
-                        {loja.descricao || 'Sem descrição registada.'}
-                      </p>
+                      <button
+                        className={styles.detailAction}
+                        disabled={!loja.id || actionId === `edit-${loja.id}`}
+                        onClick={() => void startEditing(loja)}
+                        title={loja.descricao || 'Abrir detalhes da loja'}
+                        type="button"
+                      >
+                        Ver detalhes
+                      </button>
                     </td>
                     <td>
                       <span className={styles.actions}>
@@ -516,7 +522,7 @@ export function LojasClient() {
                           type="button"
                         >
                           <Ban aria-hidden size={12} />
-                          Eliminar
+                          Desativar
                         </button>
                       </span>
                     </td>
