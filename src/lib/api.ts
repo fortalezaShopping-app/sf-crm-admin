@@ -179,6 +179,32 @@ export type PageResult<T> = {
   totalPages: number;
 };
 
+export type Notificacao = {
+  createdAt?: string;
+  id?: number;
+  lida?: boolean;
+  mensagem?: string;
+  titulo?: string;
+  tipo?: string;
+};
+
+type NotificationResponse = {
+  createdAt?: string;
+  id?: number;
+  message?: string;
+  read?: boolean;
+  title?: string;
+  type?: string;
+};
+
+type NotificationPageResponse = {
+  content?: NotificationResponse[];
+  number?: number;
+  size?: number;
+  totalElements?: number;
+  totalPages?: number;
+};
+
 export type ListOptions = {
   page?: number;
   size?: number;
@@ -415,6 +441,30 @@ export function associateUtilizadorLoja(userId: number, storeId: number, jobTitl
   });
 }
 
+export function listNotificacoes(options: ListOptions = {}) {
+  const pagination = normalizePagination(options);
+
+  return apiRequest<NotificationPageResponse>(
+    `/api/notifications${toQueryString(pagination)}`,
+  ).then((data) => {
+    const content = Array.isArray(data.content) ? data.content : [];
+
+    return {
+      items: content.map(toNotificacao),
+      page: data.number ?? pagination.page,
+      size: data.size ?? pagination.size,
+      totalItems: data.totalElements ?? content.length,
+      totalPages: Math.max(1, data.totalPages ?? 1),
+    };
+  });
+}
+
+export function marcarNotificacaoComoLida(id: number) {
+  return apiRequest<NotificationResponse>(`/api/notifications/${id}/read`, {
+    method: 'PATCH',
+  }).then(toNotificacao);
+}
+
 export function validarFatura(id: string, payload: ValidarFaturaRequest) {
   return apiRequest<ValidacaoFatura>(`/api/invoices/${encodeURIComponent(id)}/validation`, {
     body: payload,
@@ -649,6 +699,17 @@ function toUtilizador(user: UserResponse, role?: UserRole): Utilizador {
     telefone: user.phone,
     ultimoLogin: user.lastLogin,
     updatedAt: user.updatedAt,
+  };
+}
+
+function toNotificacao(notification: NotificationResponse): Notificacao {
+  return {
+    createdAt: notification.createdAt,
+    id: notification.id,
+    lida: notification.read,
+    mensagem: notification.message,
+    titulo: notification.title,
+    tipo: notification.type,
   };
 }
 

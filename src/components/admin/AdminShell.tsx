@@ -40,7 +40,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard/comprovativos', icon: FileText, label: 'Talões' },
   { href: '/dashboard/recompensas', icon: Gift, label: 'Recompensas' },
   { href: '/dashboard/analytics', icon: BarChart3, label: 'Analytics' },
-  { href: '/dashboard/auditoria', icon: Bell, label: 'Notificações' },
+  { href: '/dashboard/notificacoes', icon: Bell, label: 'Notificações' },
   { href: '/dashboard/utilizadores', icon: Users, label: 'Utilizadores' },
 ];
 
