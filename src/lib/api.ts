@@ -99,6 +99,7 @@ export type Utilizador = {
   lojaId?: number | null;
   estado?: 'ATIVO' | 'INATIVO' | 'BLOQUEADO';
   role?: UserRole;
+  roles?: UserRole[];
   photoUrl?: string;
   twoFactorEnabled?: boolean;
   ultimoLogin?: string;
@@ -973,7 +974,8 @@ function toStoreRequest(payload: LojaRequest) {
 
 function toUtilizador(user: UserResponse, role?: UserRole): Utilizador {
   const status = user.status?.toUpperCase();
-  const resolvedRole = role ?? user.roles?.find(isUserRole);
+  const roles = user.roles?.filter(isUserRole) ?? [];
+  const resolvedRole = role ?? roles[0];
 
   return {
     createdAt: user.createdAt,
@@ -984,6 +986,7 @@ function toUtilizador(user: UserResponse, role?: UserRole): Utilizador {
     nome: user.name,
     photoUrl: user.photoUrl,
     role: resolvedRole,
+    roles,
     telefone: user.phone,
     twoFactorEnabled: user.twoFactorEnabled,
     ultimoLogin: user.lastLogin,

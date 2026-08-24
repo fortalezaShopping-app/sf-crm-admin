@@ -187,7 +187,7 @@ function getSearchTarget(query: string) {
   }
 
   if (value.includes('cliente')) {
-    return '/dashboard/clientes';
+    return '/dashboard/utilizadores';
   }
 
   if (value.includes('fatura') || value.includes('comprov')) {

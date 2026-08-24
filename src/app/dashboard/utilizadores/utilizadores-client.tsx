@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { Ban, CircleCheck, Pencil, Plus, RefreshCcw, UserCog, X } from 'lucide-react';
+import { Ban, CircleCheck, Pencil, Plus, RefreshCcw, Save, UserCog, X } from 'lucide-react';
 
 import { Pagination } from '@/components/admin/Pagination';
 import {
@@ -20,6 +20,7 @@ import {
 } from '@/lib/api';
 
 type InternalRole = Exclude<UserRole, 'CUSTOMER'>;
+type RoleFilter = UserRole | 'ALL';
 
 type FormState = {
   cargo: string;
@@ -27,14 +28,20 @@ type FormState = {
   lojaId: string;
   nome: string;
   password: string;
-  role: InternalRole;
+  role: UserRole;
   telefone: string;
 };
 
-const roleOptions: Array<{ label: string; value: InternalRole }> = [
+const internalRoleOptions: Array<{ label: string; value: InternalRole }> = [
   { label: 'Administrador', value: 'ADMIN' },
   { label: 'Gestor', value: 'MANAGER' },
   { label: 'Utilizador de loja', value: 'STORE_USER' },
+];
+
+const roleFilterOptions: Array<{ label: string; value: RoleFilter }> = [
+  { label: 'Todos os utilizadores', value: 'ALL' },
+  { label: 'Clientes', value: 'CUSTOMER' },
+  ...internalRoleOptions,
 ];
 
 const initialFormState: FormState = {
@@ -49,6 +56,7 @@ const initialFormState: FormState = {
 
 export function UtilizadoresClient() {
   const [actionId, setActionId] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<Utilizador | null>(null);
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(initialFormState);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,7 +64,7 @@ export function UtilizadoresClient() {
   const [lojas, setLojas] = useState<Loja[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [page, setPage] = useState(0);
-  const [selectedRole, setSelectedRole] = useState<InternalRole>('ADMIN');
+  const [selectedRole, setSelectedRole] = useState<RoleFilter>('ALL');
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [utilizadores, setUtilizadores] = useState<Utilizador[]>([]);
@@ -71,7 +79,8 @@ export function UtilizadoresClient() {
           clearAdminApiCache();
         }
 
-        const result = await listUtilizadores(selectedRole, { page: targetPage, size: 10 });
+        const role = selectedRole === 'ALL' ? undefined : selectedRole;
+        const result = await listUtilizadores(role, { page: targetPage, size: 10 });
         setUtilizadores(result.items);
         setTotalItems(result.totalItems);
         setTotalPages(result.totalPages);
@@ -112,6 +121,10 @@ export function UtilizadoresClient() {
           await associateUtilizadorLoja(editingUserId, Number(form.lojaId), form.cargo || undefined);
         }
       } else {
+        if (!isInternalRole(form.role)) {
+          throw new Error('Clientes devem criar a conta através da aplicação mobile.');
+        }
+
         await createUtilizador({
           cargo: form.cargo || undefined,
           email: form.email,
@@ -186,13 +199,14 @@ export function UtilizadoresClient() {
     }
 
     setEditingUserId(utilizador.id);
+    setEditingUser(utilizador);
     setForm({
       cargo: '',
       email: utilizador.email ?? '',
       lojaId: '',
       nome: utilizador.nome ?? '',
       password: '',
-      role: toInternalRole(utilizador.role, selectedRole),
+      role: utilizador.role ?? 'CUSTOMER',
       telefone: utilizador.telefone ?? '',
     });
     setMessage(null);
@@ -200,33 +214,35 @@ export function UtilizadoresClient() {
 
   function resetForm() {
     setEditingUserId(null);
-    setForm({ ...initialFormState, role: selectedRole });
+    setEditingUser(null);
+    setForm({ ...initialFormState, role: getCreationRole(selectedRole) });
   }
 
-  function handleRoleFilter(role: InternalRole) {
+  function handleRoleFilter(role: RoleFilter) {
     setSelectedRole(role);
     setPage(0);
     setEditingUserId(null);
-    setForm({ ...initialFormState, role });
+    setEditingUser(null);
+    setForm({ ...initialFormState, role: getCreationRole(role) });
   }
 
   return (
     <div className="dashboard-content">
       <section className="dashboard-heading">
         <div className="heading-copy">
-          <p className="eyebrow">Acessos internos</p>
+          <p className="eyebrow">Gestão de contas</p>
           <h1>Utilizadores</h1>
-          <p>Administre contas da equipa e acessos associados a lojas.</p>
+          <p>Consulte clientes e contas internas, atualize dados e controle o acesso ao sistema.</p>
         </div>
 
         <div className="topbar-actions">
           <select
             aria-label="Filtrar por role"
             className="table-select"
-            onChange={(event) => handleRoleFilter(event.target.value as InternalRole)}
+            onChange={(event) => handleRoleFilter(event.target.value as RoleFilter)}
             value={selectedRole}
           >
-            {roleOptions.map((role) => (
+            {roleFilterOptions.map((role) => (
               <option key={role.value} value={role.value}>
                 {role.label}
               </option>
@@ -248,17 +264,19 @@ export function UtilizadoresClient() {
       <section className="management-grid">
         <article className="panel">
           <div className="panel-header">
-            <h2>{roleOptions.find((role) => role.value === selectedRole)?.label}</h2>
+            <div>
+              <h2>{roleFilterOptions.find((role) => role.value === selectedRole)?.label}</h2>
+              <p className="panel-subtitle">Contas registadas na API do Shopping Fortaleza</p>
+            </div>
             <span className="count-pill">{totalItems}</span>
           </div>
 
           <div className="table-scroll">
-            <table className="admin-table">
+            <table className="admin-table users-table">
               <thead>
                 <tr>
                   <th>Nome</th>
                   <th>Role</th>
-                  <th>Telefone</th>
                   <th>Estado</th>
                   <th>Acoes</th>
                 </tr>
@@ -268,13 +286,17 @@ export function UtilizadoresClient() {
                   utilizadores.map((utilizador) => (
                     <tr key={utilizador.id ?? utilizador.email}>
                       <td>
-                        <span className="table-title">
-                          <strong>{utilizador.nome ?? 'Sem nome'}</strong>
-                          <span>{utilizador.email ?? 'Sem email'}</span>
+                        <span className="user-cell">
+                          <span className="user-avatar" aria-hidden>
+                            {getInitials(utilizador.nome, utilizador.email)}
+                          </span>
+                          <span className="table-title">
+                            <strong>{utilizador.nome ?? 'Sem nome'}</strong>
+                            <span>{utilizador.email ?? 'Sem email'}</span>
+                          </span>
                         </span>
                       </td>
-                      <td>{formatRole(toInternalRole(utilizador.role, selectedRole))}</td>
-                      <td>{utilizador.telefone ?? '-'}</td>
+                      <td>{formatRoles(utilizador.roles, utilizador.role)}</td>
                       <td>
                         <span
                           className={
@@ -324,7 +346,7 @@ export function UtilizadoresClient() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5}>
+                    <td colSpan={4}>
                       {isLoading ? 'A carregar...' : 'Sem utilizadores nesta categoria.'}
                     </td>
                   </tr>
@@ -347,6 +369,41 @@ export function UtilizadoresClient() {
             <h2>{editingUserId ? 'Editar utilizador' : 'Novo utilizador'}</h2>
             <UserCog aria-hidden size={18} />
           </div>
+
+          {editingUser ? (
+            <div className="user-account-details">
+              <dl className="detail-list">
+                <div>
+                  <dt>ID da conta</dt>
+                  <dd>#{editingUser.id}</dd>
+                </div>
+                <div>
+                  <dt>Tipo de conta</dt>
+                  <dd>{formatRoles(editingUser.roles, editingUser.role)}</dd>
+                </div>
+                <div>
+                  <dt>Autenticação em dois passos</dt>
+                  <dd>{editingUser.twoFactorEnabled ? 'Ativa' : 'Inativa'}</dd>
+                </div>
+                <div>
+                  <dt>Foto de perfil</dt>
+                  <dd>{editingUser.photoUrl ? 'Configurada' : 'Não configurada'}</dd>
+                </div>
+                <div>
+                  <dt>Último acesso</dt>
+                  <dd>{formatDate(editingUser.ultimoLogin)}</dd>
+                </div>
+                <div>
+                  <dt>Conta criada</dt>
+                  <dd>{formatDate(editingUser.createdAt)}</dd>
+                </div>
+                <div>
+                  <dt>Última atualização</dt>
+                  <dd>{formatDate(editingUser.updatedAt)}</dd>
+                </div>
+              </dl>
+            </div>
+          ) : null}
 
           <form className="admin-form" onSubmit={handleSubmit}>
             <label>
@@ -378,16 +435,19 @@ export function UtilizadoresClient() {
               <select
                 disabled={Boolean(editingUserId)}
                 onChange={(event) =>
-                  setForm({ ...form, role: event.target.value as InternalRole })
+                  setForm({ ...form, role: event.target.value as UserRole })
                 }
                 value={form.role}
               >
-                {roleOptions.map((role) => (
+                {(editingUserId ? roleFilterOptions.filter((role) => role.value !== 'ALL') : internalRoleOptions).map((role) => (
                   <option key={role.value} value={role.value}>
                     {role.label}
                   </option>
                 ))}
               </select>
+              {editingUserId ? (
+                <span className="form-hint">O papel da conta não pode ser alterado pela API atual.</span>
+              ) : null}
             </label>
 
             {form.role === 'STORE_USER' ? (
@@ -396,10 +456,12 @@ export function UtilizadoresClient() {
                   Loja
                   <select
                     onChange={(event) => setForm({ ...form, lojaId: event.target.value })}
-                    required
+                    required={!editingUserId}
                     value={form.lojaId}
                   >
-                    <option value="">Selecione uma loja</option>
+                    <option value="">
+                      {editingUserId ? 'Manter associação atual' : 'Selecione uma loja'}
+                    </option>
                     {lojas.map((loja) => (
                       <option key={loja.id} value={loja.id}>
                         {loja.nome}
@@ -431,11 +493,11 @@ export function UtilizadoresClient() {
             )}
 
             <button className="primary-button" disabled={isSubmitting} type="submit">
-              <Plus aria-hidden size={16} />
+              {editingUserId ? <Save aria-hidden size={16} /> : <Plus aria-hidden size={16} />}
               {isSubmitting
                 ? 'A guardar...'
                 : editingUserId
-                  ? 'Guardar alteracoes'
+                  ? 'Guardar alterações'
                   : 'Criar utilizador'}
             </button>
 
@@ -452,12 +514,49 @@ export function UtilizadoresClient() {
   );
 }
 
-function formatRole(role: InternalRole) {
-  return roleOptions.find((option) => option.value === role)?.label ?? role;
+function formatRole(role: UserRole) {
+  return roleFilterOptions.find((option) => option.value === role)?.label ?? role;
 }
 
-function toInternalRole(role: UserRole | undefined, fallback: InternalRole): InternalRole {
-  return role === 'ADMIN' || role === 'MANAGER' || role === 'STORE_USER' ? role : fallback;
+function formatRoles(roles?: UserRole[], fallback?: UserRole) {
+  const values = roles?.length ? roles : fallback ? [fallback] : [];
+  return values.length ? values.map(formatRole).join(', ') : 'Sem papel';
+}
+
+function isInternalRole(role: UserRole): role is InternalRole {
+  return role === 'ADMIN' || role === 'MANAGER' || role === 'STORE_USER';
+}
+
+function getCreationRole(filter: RoleFilter): InternalRole {
+  return filter !== 'ALL' && isInternalRole(filter) ? filter : 'ADMIN';
+}
+
+function formatDate(value?: string) {
+  if (!value) {
+    return '-';
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '-';
+  }
+
+  return new Intl.DateTimeFormat('pt-AO', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
+function getInitials(name?: string, email?: string) {
+  const source = name?.trim() || email?.trim() || 'U';
+  const parts = source.split(/\s+/).filter(Boolean);
+
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+
+  return `${parts[0][0]}${parts.at(-1)?.[0] ?? ''}`.toUpperCase();
 }
 
 function getMessageClassName(message: string) {
