@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE_URL = 'https://api-demo.2-25-89-57.sslip.io';
+const DEFAULT_API_BASE_URL = 'https://api.appshoppingfortaleza.ao';
 
 export function getApiBaseUrl() {
   const apiUrl = withoutTrailingSlash(

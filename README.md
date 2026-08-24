@@ -15,7 +15,7 @@ para `.env.local` se precisar trocar o endereco.
 A URL da API deve usar HTTPS:
 
 ```bash
-NEXT_PUBLIC_API_URL=https://api-demo.2-25-89-57.sslip.io
+NEXT_PUBLIC_API_URL=https://api.appshoppingfortaleza.ao
 ```
 
 No navegador, as chamadas passam por `/api/backend/*` no proprio Next.js. Isso evita
@@ -27,12 +27,15 @@ servidor.
 - `/login`: autenticacao exclusiva de administradores por `/api/auth/admin/login`.
 - `/dashboard`: indicadores de lojas, imagens, clientes e utilizadores internos.
 - `/dashboard/lojas`: catalogo dinamico com pesquisa e filtros, criacao, edicao,
-  troca independente de imagem/logotipo e desativacao.
-- `/dashboard/clientes`: consulta e desativacao de contas `CUSTOMER` do aplicativo.
-- `/dashboard/utilizadores`: gestao de `ADMIN`, `MANAGER` e `STORE_USER`, incluindo associacao a lojas.
+  troca independente de imagem/logotipo, ativacao e desativacao.
+- `/dashboard/eventos`: agenda dinamica com criacao, edicao, imagem, pesquisa,
+  ativacao, desativacao, cancelamento e eliminacao.
+- `/dashboard/clientes`: consulta, ativacao e desativacao de contas `CUSTOMER` do aplicativo.
+- `/dashboard/utilizadores`: gestao de `ADMIN`, `MANAGER` e `STORE_USER`, incluindo associacao a lojas e controlo de estado.
 - `/dashboard/comprovativos`: aprovacao ou rejeicao de faturas por ID.
 - `/dashboard/perfil`: consulta e atualizacao do perfil autenticado.
 - `src/lib/api.ts`: cliente tipado para os endpoints da OpenAPI v1.
+- `docs/openapi.json`: copia do contrato OpenAPI usado pela implementacao.
 
 As imagens e logotipos das lojas sao carregados por
 `/api/backend/api/admin/stores/{id}/image` e

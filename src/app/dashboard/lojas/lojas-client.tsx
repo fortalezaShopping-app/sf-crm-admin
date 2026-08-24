@@ -11,6 +11,7 @@ import {
 import {
   Ban,
   Building2,
+  CircleCheck,
   FilePlus2,
   Pencil,
   Plus,
@@ -24,6 +25,7 @@ import { Pagination } from '@/components/admin/Pagination';
 import { StoreImage } from '@/components/admin/StoreImage';
 import {
   ApiError,
+  activateLoja,
   clearAdminApiCache,
   createLoja,
   deactivateLoja,
@@ -378,6 +380,25 @@ export function LojasClient() {
     }
   }
 
+  async function handleActivate(loja: Loja) {
+    if (!loja.id || !window.confirm(`Ativar a loja ${loja.nome ?? loja.id}?`)) {
+      return;
+    }
+
+    setActionId(`activate-${loja.id}`);
+    setMessage(null);
+
+    try {
+      await activateLoja(loja.id);
+      await loadLojas(true);
+      setMessage('Loja ativada com sucesso.');
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    } finally {
+      setActionId(null);
+    }
+  }
+
   return (
     <div className={styles.page}>
       <header className={styles.heading}>
@@ -514,16 +535,28 @@ export function LojasClient() {
                           <Pencil aria-hidden size={12} />
                           Editar
                         </button>
-                        <button
-                          className={styles.dangerAction}
-                          disabled={!loja.id || actionId === `deactivate-${loja.id}`}
-                          onClick={() => void handleDeactivate(loja)}
-                          title="Desativar loja"
-                          type="button"
-                        >
-                          <Ban aria-hidden size={12} />
-                          Desativar
-                        </button>
+                        {loja.estado === 'ATIVA' ? (
+                          <button
+                            className={styles.dangerAction}
+                            disabled={!loja.id || actionId === `deactivate-${loja.id}`}
+                            onClick={() => void handleDeactivate(loja)}
+                            title="Desativar loja"
+                            type="button"
+                          >
+                            <Ban aria-hidden size={12} />
+                            Desativar
+                          </button>
+                        ) : (
+                          <button
+                            disabled={!loja.id || actionId === `activate-${loja.id}`}
+                            onClick={() => void handleActivate(loja)}
+                            title="Ativar loja"
+                            type="button"
+                          >
+                            <CircleCheck aria-hidden size={12} />
+                            Ativar
+                          </button>
+                        )}
                       </span>
                     </td>
                   </tr>

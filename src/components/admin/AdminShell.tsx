@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
   BarChart3,
   Bell,
+  CalendarDays,
   FileText,
   Gift,
   LayoutDashboard,
@@ -37,6 +38,7 @@ type AdminShellProps = {
 const navItems: NavItem[] = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/dashboard/lojas', icon: Store, label: 'Lojas' },
+  { href: '/dashboard/eventos', icon: CalendarDays, label: 'Eventos' },
   { href: '/dashboard/comprovativos', icon: FileText, label: 'Talões' },
   { href: '/dashboard/recompensas', icon: Gift, label: 'Recompensas' },
   { href: '/dashboard/analytics', icon: BarChart3, label: 'Analytics' },
@@ -168,6 +170,10 @@ function getSearchTarget(query: string) {
 
   if (value.includes('loja')) {
     return '/dashboard/lojas';
+  }
+
+  if (value.includes('evento') || value.includes('agenda')) {
+    return '/dashboard/eventos';
   }
 
   if (value.includes('analytics') || value.includes('desempenho')) {

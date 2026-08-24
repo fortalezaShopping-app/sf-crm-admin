@@ -1,11 +1,12 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { Ban, Pencil, Plus, RefreshCcw, UserCog, X } from 'lucide-react';
+import { Ban, CircleCheck, Pencil, Plus, RefreshCcw, UserCog, X } from 'lucide-react';
 
 import { Pagination } from '@/components/admin/Pagination';
 import {
   ApiError,
+  activateUtilizador,
   associateUtilizadorLoja,
   clearAdminApiCache,
   createUtilizador,
@@ -157,6 +158,28 @@ export function UtilizadoresClient() {
     }
   }
 
+  async function handleActivate(utilizador: Utilizador) {
+    if (
+      !utilizador.id ||
+      !window.confirm(`Ativar o utilizador ${utilizador.nome ?? utilizador.email ?? utilizador.id}?`)
+    ) {
+      return;
+    }
+
+    setActionId(`activate-${utilizador.id}`);
+    setMessage(null);
+
+    try {
+      await activateUtilizador(utilizador.id);
+      setMessage('Utilizador ativado com sucesso.');
+      await loadUtilizadores(page, true);
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    } finally {
+      setActionId(null);
+    }
+  }
+
   function startEditing(utilizador: Utilizador) {
     if (!utilizador.id) {
       return;
@@ -274,15 +297,27 @@ export function UtilizadoresClient() {
                             <Pencil aria-hidden size={14} />
                             Editar
                           </button>
-                          <button
-                            className="table-action table-action--danger"
-                            disabled={!utilizador.id || actionId === `deactivate-${utilizador.id}`}
-                            onClick={() => void handleDeactivate(utilizador)}
-                            type="button"
-                          >
-                            <Ban aria-hidden size={14} />
-                            Desativar
-                          </button>
+                          {utilizador.estado === 'ATIVO' ? (
+                            <button
+                              className="table-action table-action--danger"
+                              disabled={!utilizador.id || actionId === `deactivate-${utilizador.id}`}
+                              onClick={() => void handleDeactivate(utilizador)}
+                              type="button"
+                            >
+                              <Ban aria-hidden size={14} />
+                              Desativar
+                            </button>
+                          ) : (
+                            <button
+                              className="table-action"
+                              disabled={!utilizador.id || actionId === `activate-${utilizador.id}`}
+                              onClick={() => void handleActivate(utilizador)}
+                              type="button"
+                            >
+                              <CircleCheck aria-hidden size={14} />
+                              Ativar
+                            </button>
+                          )}
                         </span>
                       </td>
                     </tr>

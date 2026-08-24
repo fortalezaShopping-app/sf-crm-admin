@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Ban, RefreshCcw, Users } from 'lucide-react';
+import { Ban, CircleCheck, RefreshCcw, Users } from 'lucide-react';
 
 import { Pagination } from '@/components/admin/Pagination';
 import {
   ApiError,
+  activateUtilizador,
   clearAdminApiCache,
   deactivateUtilizador,
   listUtilizadores,
@@ -53,6 +54,25 @@ export function ClientesClient() {
     try {
       await deactivateUtilizador(cliente.id);
       setMessage('Cliente desativado com sucesso.');
+      await loadClientes(page, true);
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    } finally {
+      setActionId(null);
+    }
+  }
+
+  async function handleActivate(cliente: Utilizador) {
+    if (!cliente.id || !window.confirm(`Ativar o cliente ${cliente.nome ?? cliente.email}?`)) {
+      return;
+    }
+
+    setActionId(cliente.id);
+    setMessage(null);
+
+    try {
+      await activateUtilizador(cliente.id);
+      setMessage('Cliente ativado com sucesso.');
       await loadClientes(page, true);
     } catch (error) {
       setMessage(getErrorMessage(error));
@@ -127,15 +147,27 @@ export function ClientesClient() {
                       </span>
                     </td>
                     <td>
-                      <button
-                        className="table-action table-action--danger"
-                        disabled={!cliente.id || actionId === cliente.id}
-                        onClick={() => void handleDeactivate(cliente)}
-                        type="button"
-                      >
-                        <Ban aria-hidden size={14} />
-                        Desativar
-                      </button>
+                      {cliente.estado === 'ATIVO' ? (
+                        <button
+                          className="table-action table-action--danger"
+                          disabled={!cliente.id || actionId === cliente.id}
+                          onClick={() => void handleDeactivate(cliente)}
+                          type="button"
+                        >
+                          <Ban aria-hidden size={14} />
+                          Desativar
+                        </button>
+                      ) : (
+                        <button
+                          className="table-action"
+                          disabled={!cliente.id || actionId === cliente.id}
+                          onClick={() => void handleActivate(cliente)}
+                          type="button"
+                        >
+                          <CircleCheck aria-hidden size={14} />
+                          Ativar
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

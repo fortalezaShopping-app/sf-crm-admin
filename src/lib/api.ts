@@ -97,6 +97,8 @@ export type Utilizador = {
   lojaId?: number | null;
   estado?: 'ATIVO' | 'INATIVO' | 'BLOQUEADO';
   role?: UserRole;
+  photoUrl?: string;
+  twoFactorEnabled?: boolean;
   ultimoLogin?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -127,13 +129,59 @@ type UserResponse = {
   lastLogin?: string;
   name?: string;
   phone?: string;
+  photoUrl?: string;
   roles?: string[];
   status?: string;
+  twoFactorEnabled?: boolean;
   updatedAt?: string;
 };
 
 type UserPageResponse = {
   content?: UserResponse[];
+  number?: number;
+  size?: number;
+  totalElements?: number;
+  totalPages?: number;
+};
+
+export type Evento = {
+  id?: number;
+  titulo?: string;
+  descricao?: string;
+  imageUrl?: string;
+  dataInicio?: string;
+  dataFim?: string;
+  local?: string;
+  estado?: string;
+  criadoPor?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type EventoRequest = {
+  titulo: string;
+  descricao?: string;
+  dataInicio: string;
+  dataFim: string;
+  local?: string;
+};
+
+type EventResponse = {
+  id?: number;
+  title?: string;
+  description?: string;
+  imageUrl?: string;
+  startDate?: string;
+  endDate?: string;
+  location?: string;
+  status?: string;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type EventPageResponse = {
+  content?: EventResponse[];
   number?: number;
   size?: number;
   totalElements?: number;
@@ -366,10 +414,22 @@ export function getLojaLogoPath(id: number, version?: number) {
   return `/api/backend/api/admin/stores/${id}/logo${query}`;
 }
 
+export function activateLoja(id: number) {
+  return apiRequest<StoreResponse>(`/api/admin/stores/${id}/activate`, {
+    method: 'PATCH',
+  }).then(toLoja);
+}
+
 export function deactivateLoja(id: number) {
-  return apiRequest<Record<string, unknown>>(`/api/admin/stores/${id}`, {
-    method: 'DELETE',
-  });
+  return apiRequest<StoreResponse>(`/api/admin/stores/${id}/deactivate`, {
+    method: 'PATCH',
+  }).then(toLoja);
+}
+
+export function toggleLoja(id: number) {
+  return apiRequest<StoreResponse>(`/api/admin/stores/${id}/toggle`, {
+    method: 'PATCH',
+  }).then(toLoja);
 }
 
 export function listUtilizadores(role?: UserRole, options: ListOptions = {}) {
@@ -429,8 +489,20 @@ export function updateUtilizador(id: number, payload: AtualizarUtilizadorRequest
 }
 
 export function deactivateUtilizador(id: number) {
-  return apiRequest<UserResponse>(`/api/admin/users/${id}`, {
-    method: 'DELETE',
+  return apiRequest<UserResponse>(`/api/admin/users/${id}/deactivate`, {
+    method: 'PATCH',
+  }).then(toUtilizador);
+}
+
+export function activateUtilizador(id: number) {
+  return apiRequest<UserResponse>(`/api/admin/users/${id}/activate`, {
+    method: 'PATCH',
+  }).then(toUtilizador);
+}
+
+export function toggleUtilizador(id: number) {
+  return apiRequest<UserResponse>(`/api/admin/users/${id}/toggle`, {
+    method: 'PATCH',
   }).then(toUtilizador);
 }
 
@@ -438,6 +510,100 @@ export function associateUtilizadorLoja(userId: number, storeId: number, jobTitl
   return apiRequest<void>(`/api/admin/stores/${storeId}/users`, {
     body: { jobTitle, userId },
     method: 'POST',
+  });
+}
+
+export function listEventos(options: ListOptions = {}) {
+  const pagination = normalizePagination(options);
+
+  return apiRequest<EventPageResponse>(
+    `/api/admin/events${toQueryString({
+      ...pagination,
+      sort: 'startDate,desc',
+    })}`,
+  ).then((data) => {
+    const content = Array.isArray(data.content) ? data.content : [];
+
+    return {
+      items: content.map(toEvento),
+      page: data.number ?? pagination.page,
+      size: data.size ?? pagination.size,
+      totalItems: data.totalElements ?? content.length,
+      totalPages: Math.max(1, data.totalPages ?? 1),
+    };
+  });
+}
+
+export async function listAllEventos(pageSize = 100) {
+  const firstPage = await listEventos({ page: 0, size: pageSize });
+
+  if (firstPage.totalPages <= 1) {
+    return firstPage.items;
+  }
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: firstPage.totalPages - 1 }, (_, index) =>
+      listEventos({ page: index + 1, size: pageSize }),
+    ),
+  );
+
+  return [firstPage, ...remainingPages].flatMap((result) => result.items);
+}
+
+export function createEvento(payload: EventoRequest, image?: File) {
+  const formData = toEventFormData(payload, image);
+
+  return apiRequest<EventResponse>('/api/admin/events', {
+    body: formData,
+    method: 'POST',
+  }).then(toEvento);
+}
+
+export function getEvento(id: number) {
+  return apiRequest<EventResponse>(`/api/admin/events/${id}`).then(toEvento);
+}
+
+export function updateEvento(id: number, payload: EventoRequest) {
+  return apiRequest<EventResponse>(`/api/admin/events/${id}`, {
+    body: toEventFormData(payload),
+    method: 'PUT',
+  }).then(toEvento);
+}
+
+export function replaceEventoImage(id: number, image: File) {
+  const formData = new FormData();
+  formData.append('image', image);
+
+  return apiRequest<EventResponse>(`/api/admin/events/${id}/image`, {
+    body: formData,
+    method: 'PUT',
+  }).then(toEvento);
+}
+
+export function getEventoImagePath(id: number, version?: number) {
+  const query = version ? `?v=${version}` : '';
+  return `/api/backend/api/admin/events/${id}/image${query}`;
+}
+
+export function activateEvento(id: number) {
+  return updateEventoStatus(id, 'activate');
+}
+
+export function deactivateEvento(id: number) {
+  return updateEventoStatus(id, 'deactivate');
+}
+
+export function toggleEvento(id: number) {
+  return updateEventoStatus(id, 'toggle');
+}
+
+export function cancelEvento(id: number) {
+  return updateEventoStatus(id, 'cancel');
+}
+
+export function deleteEvento(id: number) {
+  return apiRequest<void>(`/api/admin/events/${id}`, {
+    method: 'DELETE',
   });
 }
 
@@ -695,11 +861,57 @@ function toUtilizador(user: UserResponse, role?: UserRole): Utilizador {
       status === 'ACTIVE' ? 'ATIVO' : status === 'BLOCKED' ? 'BLOQUEADO' : 'INATIVO',
     id: user.id,
     nome: user.name,
+    photoUrl: user.photoUrl,
     role: resolvedRole,
     telefone: user.phone,
+    twoFactorEnabled: user.twoFactorEnabled,
     ultimoLogin: user.lastLogin,
     updatedAt: user.updatedAt,
   };
+}
+
+function toEvento(event: EventResponse): Evento {
+  return {
+    createdAt: event.createdAt,
+    criadoPor: event.createdBy,
+    dataFim: event.endDate,
+    dataInicio: event.startDate,
+    descricao: event.description,
+    estado: event.status,
+    id: event.id,
+    imageUrl: event.imageUrl,
+    local: event.location,
+    titulo: event.title,
+    updatedAt: event.updatedAt,
+  };
+}
+
+function toEventFormData(payload: EventoRequest, image?: File) {
+  const formData = new FormData();
+  const data = {
+    description: payload.descricao,
+    endDate: payload.dataFim,
+    location: payload.local,
+    startDate: payload.dataInicio,
+    title: payload.titulo,
+  };
+
+  formData.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }));
+
+  if (image) {
+    formData.append('image', image);
+  }
+
+  return formData;
+}
+
+function updateEventoStatus(
+  id: number,
+  action: 'activate' | 'cancel' | 'deactivate' | 'toggle',
+) {
+  return apiRequest<EventResponse>(`/api/admin/events/${id}/${action}`, {
+    method: 'PATCH',
+  }).then(toEvento);
 }
 
 function toNotificacao(notification: NotificationResponse): Notificacao {
