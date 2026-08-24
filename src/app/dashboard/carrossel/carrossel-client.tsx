@@ -10,6 +10,7 @@ import {
 } from 'react';
 import {
   ExternalLink,
+  ImageUp,
   Images,
   Pencil,
   Plus,
@@ -400,17 +401,25 @@ export function CarrosselClient() {
             ) : null}
 
             <div className={styles.modalBody}>
-              <CarouselImage
-                available={Boolean(
-                  editingSlideId &&
-                    slides.find((slide) => slide.id === editingSlideId)?.imageUrl
-                )}
-                id={editingSlideId ?? undefined}
-                previewUrl={imagePreviewUrl}
-                size="form"
-                title={title}
-                version={imageVersion}
-              />
+              <figure className={styles.previewPanel}>
+                <figcaption>
+                  <span>Pré-visualização</span>
+                  <small>9:16</small>
+                </figcaption>
+                <div className={styles.previewViewport}>
+                  <CarouselImage
+                    available={Boolean(
+                      editingSlideId &&
+                        slides.find((slide) => slide.id === editingSlideId)?.imageUrl
+                    )}
+                    id={editingSlideId ?? undefined}
+                    previewUrl={imagePreviewUrl}
+                    size="form"
+                    title={title}
+                    version={imageVersion}
+                  />
+                </div>
+              </figure>
 
               <form className={styles.form} onSubmit={handleSubmit}>
                 <label>
@@ -423,19 +432,31 @@ export function CarrosselClient() {
                     value={title}
                   />
                 </label>
-                <label>
-                  {editingSlideId ? 'Substituir imagem' : 'Imagem do carrossel'}
-                  <input
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
-                    required={!editingSlideId}
-                    type="file"
-                  />
-                  <span>
-                    {image?.name ??
-                      (editingSlideId
-                        ? 'Mantenha vazio para preservar a imagem atual.'
-                        : 'Use uma imagem vertical otimizada para mobile.')}
+                <label className={styles.fileLabel}>
+                  <span className={styles.fieldLabel}>
+                    {editingSlideId ? 'Substituir imagem' : 'Imagem do carrossel'}
+                  </span>
+                  <span className={styles.filePicker}>
+                    <span className={styles.filePickerAction}>
+                      <ImageUp aria-hidden size={15} />
+                      Selecionar imagem
+                    </span>
+                    <span className={styles.filePickerName}>
+                      {image?.name ?? (editingSlideId ? 'Imagem atual' : 'Nenhum ficheiro')}
+                    </span>
+                    <input
+                      accept="image/jpeg,image/png,image/webp"
+                      className={styles.fileInput}
+                      disabled={isSubmitting}
+                      onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
+                      required={!editingSlideId}
+                      type="file"
+                    />
+                  </span>
+                  <span className={styles.fieldHint}>
+                    {editingSlideId && !image
+                      ? 'A imagem atual será preservada.'
+                      : 'PNG, JPG ou WebP em formato vertical.'}
                   </span>
                 </label>
                 <div className={styles.formActions}>

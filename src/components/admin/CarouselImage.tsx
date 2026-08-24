@@ -35,7 +35,7 @@ export function CarouselImage({
           alt={`Imagem do carrossel ${title ?? id ?? ''}`.trim()}
           fill
           onError={() => setFailedSrc(src)}
-          sizes={size === 'card' ? '(max-width: 760px) 100vw, 33vw' : '520px'}
+          sizes={size === 'card' ? '(max-width: 760px) 100vw, 33vw' : '180px'}
           src={src}
           unoptimized
         />
