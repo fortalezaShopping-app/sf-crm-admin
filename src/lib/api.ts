@@ -25,6 +25,7 @@ export type Loja = {
   telefone?: string;
   endereco?: string;
   imageUrl?: string;
+  invoiceTemplateUrl?: string;
   logoUrl?: string;
   facebookUrl?: string;
   instagramUrl?: string;
@@ -45,8 +46,8 @@ export type LojaFloor =
 
 export type LojaRequest = {
   nome: string;
-  razaoSocial?: string;
-  nif?: string;
+  razaoSocial: string;
+  nif: string;
   categoria: string;
   piso: LojaFloor;
   horario: string;
@@ -70,6 +71,7 @@ type StoreResponse = {
   facebookUrl?: string;
   id?: number;
   imageUrl?: string;
+  invoiceTemplateUrl?: string;
   legalName?: string;
   logoUrl?: string;
   instagramUrl?: string;
@@ -182,6 +184,34 @@ type EventResponse = {
 
 type EventPageResponse = {
   content?: EventResponse[];
+  number?: number;
+  size?: number;
+  totalElements?: number;
+  totalPages?: number;
+};
+
+export type CarouselSlide = {
+  createdAt?: string;
+  id?: number;
+  imageUrl?: string;
+  title?: string;
+  updatedAt?: string;
+};
+
+export type CarouselSlideRequest = {
+  title: string;
+};
+
+type CarouselResponse = {
+  createdAt?: string;
+  id?: number;
+  imageUrl?: string;
+  title?: string;
+  updatedAt?: string;
+};
+
+type CarouselPageResponse = {
+  content?: CarouselResponse[];
   number?: number;
   size?: number;
   totalElements?: number;
@@ -356,12 +386,18 @@ export async function listAllLojas(pageSize = 100) {
   return [firstPage, ...remainingPages].flatMap((result) => result.items);
 }
 
-export function createLoja(payload: LojaRequest, image: File, logo?: File) {
+export function createLoja(
+  payload: LojaRequest,
+  image: File,
+  invoiceTemplate: File,
+  logo?: File,
+) {
   const formData = new FormData();
   const data = toStoreRequest(payload);
 
   formData.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }));
   formData.append('image', image);
+  formData.append('invoiceTemplate', invoiceTemplate);
 
   if (logo) {
     formData.append('logo', logo);
@@ -404,6 +440,16 @@ export function replaceLojaLogo(id: number, logo: File) {
   }).then(toLoja);
 }
 
+export function replaceLojaInvoiceTemplate(id: number, invoiceTemplate: File) {
+  const formData = new FormData();
+  formData.append('invoiceTemplate', invoiceTemplate);
+
+  return apiRequest<StoreResponse>(`/api/admin/stores/${id}/invoice-template`, {
+    body: formData,
+    method: 'PUT',
+  }).then(toLoja);
+}
+
 export function getLojaImagePath(id: number, version?: number) {
   const query = version ? `?v=${version}` : '';
   return `/api/backend/api/admin/stores/${id}/image${query}`;
@@ -412,6 +458,11 @@ export function getLojaImagePath(id: number, version?: number) {
 export function getLojaLogoPath(id: number, version?: number) {
   const query = version ? `?v=${version}` : '';
   return `/api/backend/api/admin/stores/${id}/logo${query}`;
+}
+
+export function getLojaInvoiceTemplatePath(id: number, version?: number) {
+  const query = version ? `?v=${version}` : '';
+  return `/api/backend/api/admin/stores/${id}/invoice-template${query}`;
 }
 
 export function activateLoja(id: number) {
@@ -605,6 +656,75 @@ export function deleteEvento(id: number) {
   return apiRequest<void>(`/api/admin/events/${id}`, {
     method: 'DELETE',
   });
+}
+
+export function listCarouselSlides(options: ListOptions = {}) {
+  const pagination = normalizePagination(options);
+
+  return apiRequest<CarouselPageResponse>(
+    `/api/admin/carousel-slides${toQueryString(pagination)}`,
+  ).then((data) => {
+    const content = Array.isArray(data.content) ? data.content : [];
+
+    return {
+      items: content.map(toCarouselSlide),
+      page: data.number ?? pagination.page,
+      size: data.size ?? pagination.size,
+      totalItems: data.totalElements ?? content.length,
+      totalPages: Math.max(1, data.totalPages ?? 1),
+    };
+  });
+}
+
+export async function listAllCarouselSlides(pageSize = 100) {
+  const firstPage = await listCarouselSlides({ page: 0, size: pageSize });
+
+  if (firstPage.totalPages <= 1) {
+    return firstPage.items;
+  }
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: firstPage.totalPages - 1 }, (_, index) =>
+      listCarouselSlides({ page: index + 1, size: pageSize }),
+    ),
+  );
+
+  return [firstPage, ...remainingPages].flatMap((result) => result.items);
+}
+
+export function createCarouselSlide(payload: CarouselSlideRequest, image: File) {
+  return apiRequest<CarouselResponse>('/api/admin/carousel-slides', {
+    body: toCarouselFormData(payload, image),
+    method: 'POST',
+  }).then(toCarouselSlide);
+}
+
+export function getCarouselSlide(id: number) {
+  return apiRequest<CarouselResponse>(`/api/admin/carousel-slides/${id}`).then(
+    toCarouselSlide,
+  );
+}
+
+export function updateCarouselSlide(
+  id: number,
+  payload: CarouselSlideRequest,
+  image?: File,
+) {
+  return apiRequest<CarouselResponse>(`/api/admin/carousel-slides/${id}`, {
+    body: toCarouselFormData(payload, image),
+    method: 'PUT',
+  }).then(toCarouselSlide);
+}
+
+export function deleteCarouselSlide(id: number) {
+  return apiRequest<void>(`/api/admin/carousel-slides/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export function getCarouselSlideImagePath(id: number, version?: number) {
+  const query = version ? `?v=${version}` : '';
+  return `/api/backend/api/admin/carousel-slides/${id}/image${query}`;
 }
 
 export function listNotificacoes(options: ListOptions = {}) {
@@ -820,6 +940,7 @@ function toLoja(store: StoreResponse): Loja {
     horario: store.openingHours,
     id: store.id,
     imageUrl: store.imageUrl,
+    invoiceTemplateUrl: store.invoiceTemplateUrl,
     instagramUrl: store.instagramUrl,
     nome: store.name,
     nif: store.taxId,
@@ -897,6 +1018,32 @@ function toEventFormData(payload: EventoRequest, image?: File) {
   };
 
   formData.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }));
+
+  if (image) {
+    formData.append('image', image);
+  }
+
+  return formData;
+}
+
+function toCarouselSlide(slide: CarouselResponse): CarouselSlide {
+  return {
+    createdAt: slide.createdAt,
+    id: slide.id,
+    imageUrl: slide.imageUrl,
+    title: slide.title,
+    updatedAt: slide.updatedAt,
+  };
+}
+
+function toCarouselFormData(payload: CarouselSlideRequest, image?: File) {
+  const formData = new FormData();
+  formData.append(
+    'data',
+    new Blob([JSON.stringify({ title: payload.title })], {
+      type: 'application/json',
+    }),
+  );
 
   if (image) {
     formData.append('image', image);

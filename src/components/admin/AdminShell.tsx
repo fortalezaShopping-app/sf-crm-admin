@@ -7,6 +7,7 @@ import {
   CalendarDays,
   FileText,
   Gift,
+  Images,
   LayoutDashboard,
   LogOut,
   Search,
@@ -39,6 +40,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/dashboard/lojas', icon: Store, label: 'Lojas' },
   { href: '/dashboard/eventos', icon: CalendarDays, label: 'Eventos' },
+  { href: '/dashboard/carrossel', icon: Images, label: 'Carrossel' },
   { href: '/dashboard/comprovativos', icon: FileText, label: 'Talões' },
   { href: '/dashboard/recompensas', icon: Gift, label: 'Recompensas' },
   { href: '/dashboard/analytics', icon: BarChart3, label: 'Analytics' },
@@ -174,6 +176,10 @@ function getSearchTarget(query: string) {
 
   if (value.includes('evento') || value.includes('agenda')) {
     return '/dashboard/eventos';
+  }
+
+  if (value.includes('carrossel') || value.includes('campanha')) {
+    return '/dashboard/carrossel';
   }
 
   if (value.includes('analytics') || value.includes('desempenho')) {

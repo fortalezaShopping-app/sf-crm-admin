@@ -1,0 +1,498 @@
+.page {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 24px;
+  padding: 12px 32px 38px;
+  color: var(--primary);
+}
+
+.heading {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.headingCopy {
+  display: grid;
+  gap: 6px;
+}
+
+.headingCopy h1,
+.headingCopy p {
+  margin: 0;
+}
+
+.headingCopy h1 {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 40px;
+}
+
+.headingCopy p {
+  color: var(--muted-text);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.createButton,
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 0 20px;
+}
+
+.createButton,
+.primaryButton {
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+.createButton:hover,
+.primaryButton:hover {
+  background: var(--primary-pressed);
+}
+
+.secondaryButton {
+  border: 1px solid #c8aaa0;
+  background: #fff;
+  color: var(--primary);
+}
+
+.successNotice,
+.errorNotice,
+.modalError {
+  border: 1px solid;
+  border-radius: 7px;
+  font-size: 12px;
+  line-height: 18px;
+  padding: 10px 12px;
+}
+
+.successNotice,
+.errorNotice {
+  margin: -14px 0 0;
+}
+
+.successNotice {
+  border-color: rgba(30, 122, 69, 0.22);
+  background: rgba(30, 122, 69, 0.07);
+  color: var(--success);
+}
+
+.errorNotice,
+.modalError {
+  border-color: rgba(180, 35, 24, 0.22);
+  background: rgba(180, 35, 24, 0.07);
+  color: var(--error);
+}
+
+.contentCard {
+  display: flex;
+  min-height: calc(100vh - 236px);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #ddd0ca;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 3px 3px rgba(46, 30, 24, 0.16);
+}
+
+.toolbar {
+  display: flex;
+  min-height: 76px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid #dfd0ca;
+  padding: 16px 24px;
+}
+
+.toolbar > div {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  color: var(--muted-text);
+  font-size: 12px;
+}
+
+.toolbar strong {
+  color: var(--primary);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.searchField {
+  display: grid;
+  width: min(100%, 280px);
+  min-height: 38px;
+  grid-template-columns: 17px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #b98273;
+  border-radius: 5px;
+  padding: 0 10px;
+}
+
+.searchField:focus-within {
+  box-shadow: 0 0 0 3px rgba(139, 50, 31, 0.1);
+}
+
+.searchField input {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  padding: 8px 0;
+}
+
+.slidesGrid {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
+  gap: 18px;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.slideCard {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #decfc9;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.slideCard :global(.carousel-image) {
+  width: 100%;
+  height: 190px;
+  border: 0;
+  border-radius: 0;
+}
+
+.slideBody {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 14px;
+}
+
+.slideBody > div:first-child {
+  min-width: 0;
+}
+
+.slideBody h2,
+.slideBody p {
+  overflow: hidden;
+  margin: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slideBody h2 {
+  color: #42271f;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 19px;
+}
+
+.slideBody p {
+  margin-top: 3px;
+  color: var(--muted-text);
+  font-size: 10px;
+}
+
+.actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 5px;
+}
+
+.actions a,
+.actions button {
+  display: grid;
+  width: 31px;
+  height: 31px;
+  place-items: center;
+  border: 1px solid #ba8272;
+  border-radius: 5px;
+  background: #fff;
+  color: var(--primary);
+}
+
+.actions a:hover,
+.actions button:hover:not(:disabled) {
+  background: #f7e6de;
+}
+
+.actions .deleteAction {
+  border-color: #cf978d;
+  color: var(--error);
+}
+
+.actions button:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+.emptyState {
+  display: grid;
+  min-height: 320px;
+  grid-column: 1 / -1;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  color: var(--muted-text);
+  text-align: center;
+}
+
+.emptyState strong {
+  color: var(--primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.emptyState span {
+  font-size: 12px;
+}
+
+.pagination :global(.table-pagination) {
+  min-height: 54px;
+  border-color: #dbcac3;
+  color: var(--muted-text);
+  font-size: 11px;
+}
+
+.modalBackdrop {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  overflow-y: auto;
+  place-items: center;
+  background: rgba(35, 22, 17, 0.52);
+  padding: 28px;
+}
+
+.modal {
+  width: min(100%, 720px);
+  max-height: calc(100vh - 56px);
+  overflow: hidden;
+  border: 1px solid #d8c7c0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 22px 70px rgba(34, 20, 15, 0.3);
+}
+
+.modalHeader {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #e2d5cf;
+  padding: 16px 18px;
+}
+
+.modalHeader h2,
+.modalHeader p {
+  margin: 0;
+}
+
+.modalHeader h2 {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.modalHeader p {
+  margin-top: 2px;
+  color: var(--muted-text);
+  font-size: 11px;
+}
+
+.modalTitleIcon,
+.closeButton {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 6px;
+}
+
+.modalTitleIcon {
+  background: #f3e3dc;
+}
+
+.closeButton {
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+}
+
+.closeButton:hover {
+  background: #f4e9e4;
+}
+
+.modalError {
+  margin: 12px 18px 0;
+}
+
+.modalBody {
+  display: grid;
+  max-height: calc(100vh - 150px);
+  grid-template-columns: minmax(220px, 0.8fr) minmax(280px, 1.2fr);
+  gap: 20px;
+  overflow-y: auto;
+  padding: 18px;
+}
+
+.modalBody :global(.carousel-image) {
+  width: 100%;
+  min-height: 330px;
+  border: 1px solid #decfc9;
+  border-radius: 7px;
+  background: #f2e9e5;
+}
+
+.modalBody :global(.carousel-image img),
+.slideCard :global(.carousel-image img) {
+  object-fit: cover;
+}
+
+.form {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+
+.form label {
+  display: grid;
+  gap: 7px;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.form input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #b98273;
+  border-radius: 6px;
+  outline: 0;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  padding: 9px 11px;
+}
+
+.form input:focus {
+  box-shadow: 0 0 0 3px rgba(139, 50, 31, 0.1);
+}
+
+.form label > span {
+  color: var(--muted-text);
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 15px;
+}
+
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 6px;
+}
+
+@media (max-width: 1040px) {
+  .page {
+    padding-inline: 24px;
+  }
+
+  .slidesGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .page {
+    gap: 20px;
+    padding: 14px 16px 36px;
+  }
+
+  .heading {
+    align-items: flex-start;
+  }
+
+  .headingCopy h1 {
+    font-size: 28px;
+    line-height: 34px;
+  }
+
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 16px;
+  }
+
+  .searchField {
+    width: 100%;
+  }
+
+  .slidesGrid {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .modalBackdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .modal {
+    width: 100%;
+    max-height: 94vh;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .modalBody {
+    max-height: calc(94vh - 72px);
+    grid-template-columns: 1fr;
+  }
+
+  .modalBody :global(.carousel-image) {
+    min-height: 250px;
+  }
+}
+
+@media (max-width: 470px) {
+  .heading,
+  .createButton {
+    width: 100%;
+  }
+
+  .heading {
+    display: grid;
+  }
+
+  .formActions > button {
+    width: 100%;
+  }
+}

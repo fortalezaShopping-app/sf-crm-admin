@@ -30,8 +30,10 @@ import {
   createLoja,
   deactivateLoja,
   getLoja,
+  getLojaInvoiceTemplatePath,
   listAllLojas,
   replaceLojaImage,
+  replaceLojaInvoiceTemplate,
   replaceLojaLogo,
   updateLoja,
   type Loja,
@@ -106,6 +108,8 @@ export function LojasClient() {
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  const [invoiceTemplate, setInvoiceTemplate] = useState<File | null>(null);
+  const [invoiceTemplatePreviewUrl, setInvoiceTemplatePreviewUrl] = useState<string | null>(null);
   const [mediaVersion, setMediaVersion] = useState(0);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -119,6 +123,7 @@ export function LojasClient() {
   const formRef = useRef<HTMLFormElement>(null);
   const imagePreviewRef = useRef<string | null>(null);
   const logoPreviewRef = useRef<string | null>(null);
+  const invoiceTemplatePreviewRef = useRef<string | null>(null);
 
   const loadLojas = useCallback(async (bypassCache = false) => {
     setIsLoading(true);
@@ -152,6 +157,7 @@ export function LojasClient() {
     () => () => {
       revokePreview(imagePreviewRef);
       revokePreview(logoPreviewRef);
+      revokePreview(invoiceTemplatePreviewRef);
     },
     [],
   );
@@ -252,6 +258,12 @@ export function LojasClient() {
           mediaUpdates.push(replaceLojaLogo(editingStoreId, logo));
         }
 
+        if (invoiceTemplate) {
+          mediaUpdates.push(
+            replaceLojaInvoiceTemplate(editingStoreId, invoiceTemplate),
+          );
+        }
+
         if (mediaUpdates.length > 0) {
           await Promise.all(mediaUpdates);
           setMediaVersion((current) => current + 1);
@@ -265,7 +277,11 @@ export function LojasClient() {
           throw new Error('Selecione a imagem principal da loja.');
         }
 
-        await createLoja(payload, image, logo ?? undefined);
+        if (!invoiceTemplate) {
+          throw new Error('Selecione o modelo oficial de fatura da loja.');
+        }
+
+        await createLoja(payload, image, invoiceTemplate, logo ?? undefined);
         resetForm();
         setPage(0);
         await loadLojas(true);
@@ -292,6 +308,7 @@ export function LojasClient() {
       setForm(toFormState(detail));
       setImageFile(null);
       setLogoFile(null);
+      setInvoiceTemplateFile(null);
       setIsEditorOpen(true);
     } catch (error) {
       setMessage(getErrorMessage(error));
@@ -316,11 +333,20 @@ export function LojasClient() {
     setLogoPreviewUrl(previewUrl);
   }
 
+  function setInvoiceTemplateFile(file: File | null) {
+    revokePreview(invoiceTemplatePreviewRef);
+    const previewUrl = file ? URL.createObjectURL(file) : null;
+    invoiceTemplatePreviewRef.current = previewUrl;
+    setInvoiceTemplate(file);
+    setInvoiceTemplatePreviewUrl(previewUrl);
+  }
+
   function resetForm() {
     setEditingStoreId(null);
     setForm(initialFormState);
     setImageFile(null);
     setLogoFile(null);
+    setInvoiceTemplateFile(null);
     setIsEditorOpen(false);
     formRef.current?.reset();
   }
@@ -474,6 +500,7 @@ export function LojasClient() {
                 <th>Loja</th>
                 <th>Localização</th>
                 <th>Status</th>
+                <th>Modelo fiscal</th>
                 <th>Descrição</th>
                 <th>Ação</th>
               </tr>
@@ -513,6 +540,20 @@ export function LojasClient() {
                       <span className={getStatusClassName(loja.estado)}>
                         {formatStatus(loja.estado)}
                       </span>
+                    </td>
+                    <td>
+                      {loja.id && loja.invoiceTemplateUrl ? (
+                        <a
+                          className={styles.templateLink}
+                          href={getLojaInvoiceTemplatePath(loja.id, mediaVersion)}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          Ver modelo
+                        </a>
+                      ) : (
+                        <span className={styles.templateMissing}>Em falta</span>
+                      )}
                     </td>
                     <td>
                       <button
@@ -563,7 +604,7 @@ export function LojasClient() {
                 ))
               ) : (
                 <tr>
-                  <td className={styles.emptyState} colSpan={6}>
+                  <td className={styles.emptyState} colSpan={7}>
                     {isLoading ? 'A carregar lojas...' : 'Nenhuma loja corresponde aos filtros.'}
                   </td>
                 </tr>
@@ -650,6 +691,21 @@ export function LojasClient() {
                   />
                   <figcaption>Logotipo</figcaption>
                 </figure>
+                <figure>
+                  <StoreImage
+                    available={Boolean(
+                      editingStoreId &&
+                        lojas.find((loja) => loja.id === editingStoreId)?.invoiceTemplateUrl
+                    )}
+                    id={editingStoreId ?? undefined}
+                    kind="invoice-template"
+                    name={form.nome}
+                    previewUrl={invoiceTemplatePreviewUrl}
+                    size="form"
+                    version={mediaVersion}
+                  />
+                  <figcaption>Modelo oficial de fatura</figcaption>
+                </figure>
               </div>
 
               <form className="admin-form" onSubmit={handleSubmit} ref={formRef}>
@@ -670,6 +726,7 @@ export function LojasClient() {
               <input
                 maxLength={200}
                 onChange={(event) => setForm({ ...form, razaoSocial: event.target.value })}
+                required
                 value={form.razaoSocial}
               />
             </label>
@@ -685,6 +742,7 @@ export function LojasClient() {
                   }
                   pattern="[0-9]{9,15}"
                   placeholder="9 a 15 digitos"
+                  required
                   value={form.nif}
                 />
               </label>
@@ -842,6 +900,26 @@ export function LojasClient() {
               </span>
             </label>
 
+            <label>
+              {editingStoreId
+                ? 'Substituir modelo oficial de fatura'
+                : 'Modelo oficial de fatura'}
+              <input
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(event) =>
+                  setInvoiceTemplateFile(event.target.files?.[0] ?? null)
+                }
+                required={!editingStoreId}
+                type="file"
+              />
+              <span className="form-hint">
+                {invoiceTemplate?.name ??
+                  (editingStoreId
+                    ? 'Mantenha vazio para preservar o modelo atual.'
+                    : 'Obrigatório para validar faturas desta loja.')}
+              </span>
+            </label>
+
             <div className="form-actions">
               <button className="primary-button" disabled={isSubmitting} type="submit">
                 {editingStoreId ? <Save aria-hidden size={16} /> : <Plus aria-hidden size={16} />}
@@ -887,6 +965,17 @@ function toFormState(loja: Loja): FormState {
 }
 
 function toRequest(form: FormState): LojaRequest {
+  const nif = form.nif.trim();
+  const razaoSocial = form.razaoSocial.trim();
+
+  if (!/^[0-9]{9,15}$/.test(nif)) {
+    throw new Error('Indique um NIF válido com 9 a 15 algarismos.');
+  }
+
+  if (!razaoSocial) {
+    throw new Error('Indique a razão social da loja.');
+  }
+
   return {
     categoria: form.categoria.trim(),
     descricao: form.descricao.trim() || undefined,
@@ -895,10 +984,10 @@ function toRequest(form: FormState): LojaRequest {
     facebookUrl: form.facebookUrl.trim() || undefined,
     horario: form.horario.trim(),
     instagramUrl: form.instagramUrl.trim() || undefined,
-    nif: form.nif.trim() || undefined,
+    nif,
     nome: form.nome.trim(),
     piso: form.piso,
-    razaoSocial: form.razaoSocial.trim() || undefined,
+    razaoSocial,
     sourceUrl: form.sourceUrl.trim() || undefined,
     telefone: form.telefone.trim(),
   };

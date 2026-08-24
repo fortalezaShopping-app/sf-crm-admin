@@ -1,14 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { ImageIcon, Store } from 'lucide-react';
+import { FileText, ImageIcon, Store } from 'lucide-react';
 import Image from 'next/image';
 
-import { getLojaImagePath, getLojaLogoPath } from '@/lib/api';
+import {
+  getLojaImagePath,
+  getLojaInvoiceTemplatePath,
+  getLojaLogoPath,
+} from '@/lib/api';
 
 type StoreImageProps = {
+  available?: boolean;
   id?: number;
-  kind?: 'image' | 'logo';
+  kind?: 'image' | 'invoice-template' | 'logo';
   name?: string;
   previewUrl?: string | null;
   size?: 'form' | 'table';
@@ -16,6 +21,7 @@ type StoreImageProps = {
 };
 
 export function StoreImage({
+  available = true,
   id,
   kind = 'image',
   name,
@@ -23,21 +29,30 @@ export function StoreImage({
   size = 'table',
   version = 0,
 }: StoreImageProps) {
-  const apiSrc = id
+  const apiSrc = id && available
     ? kind === 'logo'
       ? getLojaLogoPath(id, version)
-      : getLojaImagePath(id, version)
+      : kind === 'invoice-template'
+        ? getLojaInvoiceTemplatePath(id, version)
+        : getLojaImagePath(id, version)
     : null;
   const src = previewUrl ?? apiSrc;
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const hasError = !src || failedSrc === src;
-  const FallbackIcon = kind === 'logo' ? Store : ImageIcon;
+  const FallbackIcon =
+    kind === 'logo' ? Store : kind === 'invoice-template' ? FileText : ImageIcon;
+  const label =
+    kind === 'logo'
+      ? 'Logotipo'
+      : kind === 'invoice-template'
+        ? 'Modelo de fatura'
+        : 'Imagem';
 
   return (
     <span className={`store-image store-image--${size} store-image--${kind}`}>
       {!hasError ? (
         <Image
-          alt={`${kind === 'logo' ? 'Logotipo' : 'Imagem'} da loja ${name ?? id}`}
+          alt={`${label} da loja ${name ?? id}`}
           fill
           onError={() => setFailedSrc(src)}
           sizes={size === 'table' ? '52px' : '320px'}

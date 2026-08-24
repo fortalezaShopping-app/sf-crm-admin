@@ -999,6 +999,11 @@ a {
   padding: 5px;
 }
 
+.store-image--invoice-template img {
+  object-fit: contain;
+  padding: 5px;
+}
+
 .store-image--table {
   width: 52px;
   height: 52px;

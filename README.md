@@ -30,6 +30,7 @@ servidor.
   troca independente de imagem/logotipo, ativacao e desativacao.
 - `/dashboard/eventos`: agenda dinamica com criacao, edicao, imagem, pesquisa,
   ativacao, desativacao, cancelamento e eliminacao.
+- `/dashboard/carrossel`: gestao visual das imagens principais da Home mobile.
 - `/dashboard/clientes`: consulta, ativacao e desativacao de contas `CUSTOMER` do aplicativo.
 - `/dashboard/utilizadores`: gestao de `ADMIN`, `MANAGER` e `STORE_USER`, incluindo associacao a lojas e controlo de estado.
 - `/dashboard/comprovativos`: aprovacao ou rejeicao de faturas por ID.
@@ -37,9 +38,10 @@ servidor.
 - `src/lib/api.ts`: cliente tipado para os endpoints da OpenAPI v1.
 - `docs/openapi.json`: copia do contrato OpenAPI usado pela implementacao.
 
-As imagens e logotipos das lojas sao carregados por
+As imagens, logotipos e modelos oficiais de fatura das lojas sao carregados por
 `/api/backend/api/admin/stores/{id}/image` e
-`/api/backend/api/admin/stores/{id}/logo`.
+`/api/backend/api/admin/stores/{id}/logo` e
+`/api/backend/api/admin/stores/{id}/invoice-template`.
 O navegador envia apenas o cookie de sessao ao Next.js, e o proxy acrescenta o JWT
 ao pedido feito para a API.
 
