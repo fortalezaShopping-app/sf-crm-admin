@@ -233,6 +233,43 @@ export type ValidacaoFatura = {
   validatedAt?: string;
 };
 
+export type FaturaAdmin = {
+  customerTaxId?: string;
+  id?: number;
+  imageUrl?: string;
+  invoiceDate?: string;
+  invoiceNumber?: string;
+  issuerTaxId?: string;
+  note?: string;
+  status?: string;
+  storeId?: number;
+  storeName?: string;
+  totalAmount?: number;
+};
+
+export type OcrFatura = {
+  confidence?: number;
+  extractedCustomerTaxId?: string;
+  extractedInvoiceDate?: string;
+  extractedInvoiceNumber?: string;
+  extractedIssuerTaxId?: string;
+  extractedText?: string;
+  extractedTotalAmount?: number;
+  id?: number;
+};
+
+type FaturaAdminPageResponse = {
+  content?: FaturaAdmin[];
+  number?: number;
+  size?: number;
+  totalElements?: number;
+  totalPages?: number;
+};
+
+export type ListFaturasOptions = ListOptions & {
+  status?: string;
+};
+
 export type Profile = {
   createdAt?: string;
   email?: string;
@@ -750,6 +787,47 @@ export function marcarNotificacaoComoLida(id: number) {
   return apiRequest<NotificationResponse>(`/api/notifications/${id}/read`, {
     method: 'PATCH',
   }).then(toNotificacao);
+}
+
+export function listFaturas(options: ListFaturasOptions = {}) {
+  const pagination = normalizePagination(options);
+
+  return apiRequest<FaturaAdminPageResponse>(
+    `/api/admin/invoices${toQueryString({
+      ...pagination,
+      sort: 'id,desc',
+      status: options.status,
+    })}`,
+  ).then((data): PageResult<FaturaAdmin> => {
+    const items = Array.isArray(data.content) ? data.content : [];
+
+    return {
+      items,
+      page: data.number ?? pagination.page,
+      size: data.size ?? pagination.size,
+      totalItems: data.totalElements ?? items.length,
+      totalPages: Math.max(1, data.totalPages ?? 1),
+    };
+  });
+}
+
+export function getFatura(id: number) {
+  return apiRequest<FaturaAdmin>(`/api/admin/invoices/${id}`);
+}
+
+export function getFaturaOcr(id: number) {
+  return apiRequest<OcrFatura>(`/api/admin/invoices/${id}/ocr`);
+}
+
+export function getFaturaValidacao(id: number) {
+  return apiRequest<ValidacaoFatura | undefined>(
+    `/api/admin/invoices/${id}/validation`,
+  ).then((validation) => validation ?? null);
+}
+
+export function getFaturaImagePath(id: number, version?: number) {
+  const query = version ? `?v=${version}` : '';
+  return `/api/backend/api/admin/invoices/${id}/image${query}`;
 }
 
 export function validarFatura(id: string, payload: ValidarFaturaRequest) {
