@@ -1,15 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { Ban, CircleCheck, RefreshCcw, Users } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Ban, CircleCheck, RefreshCcw, Search, Users } from 'lucide-react';
 
 import { Pagination } from '@/components/admin/Pagination';
+import { useAdminSearchQuery } from '@/components/admin/useAdminSearchQuery';
+import { matchesSearchQuery } from '@/lib/admin-search';
 import {
   ApiError,
   activateUtilizador,
   clearAdminApiCache,
   deactivateUtilizador,
-  listUtilizadores,
+  listAllUtilizadores,
   type Utilizador,
 } from '@/lib/api';
 
@@ -19,10 +21,9 @@ export function ClientesClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [page, setPage] = useState(0);
-  const [totalItems, setTotalItems] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
+  const { deferredQuery, query, setQuery } = useAdminSearchQuery();
 
-  const loadClientes = useCallback(async (targetPage: number, bypassCache = false) => {
+  const loadClientes = useCallback(async (bypassCache = false) => {
     await Promise.resolve();
     setIsLoading(true);
     setMessage(null);
@@ -32,10 +33,8 @@ export function ClientesClient() {
         clearAdminApiCache();
       }
 
-      const result = await listUtilizadores('CUSTOMER', { page: targetPage });
-      setClientes(result.items);
-      setTotalItems(result.totalItems);
-      setTotalPages(result.totalPages);
+      const result = await listAllUtilizadores('CUSTOMER');
+      setClientes(result);
     } catch (error) {
       setMessage(getErrorMessage(error));
     } finally {
@@ -54,7 +53,7 @@ export function ClientesClient() {
     try {
       await deactivateUtilizador(cliente.id);
       setMessage('Cliente desativado com sucesso.');
-      await loadClientes(page, true);
+      await loadClientes(true);
     } catch (error) {
       setMessage(getErrorMessage(error));
     } finally {
@@ -73,7 +72,7 @@ export function ClientesClient() {
     try {
       await activateUtilizador(cliente.id);
       setMessage('Cliente ativado com sucesso.');
-      await loadClientes(page, true);
+      await loadClientes(true);
     } catch (error) {
       setMessage(getErrorMessage(error));
     } finally {
@@ -82,9 +81,28 @@ export function ClientesClient() {
   }
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => void loadClientes(page), 0);
+    const timeoutId = window.setTimeout(() => void loadClientes(), 0);
     return () => window.clearTimeout(timeoutId);
-  }, [loadClientes, page]);
+  }, [loadClientes]);
+
+  const filteredClientes = useMemo(
+    () =>
+      clientes.filter((cliente) =>
+        matchesSearchQuery(deferredQuery, [
+          cliente.id,
+          cliente.nome,
+          cliente.email,
+          cliente.telefone,
+          cliente.estado,
+          cliente.ultimoLogin,
+          cliente.createdAt,
+        ]),
+      ),
+    [clientes, deferredQuery],
+  );
+  const totalPages = Math.max(1, Math.ceil(filteredClientes.length / 10));
+  const visiblePage = Math.min(page, totalPages - 1);
+  const visibleClientes = filteredClientes.slice(visiblePage * 10, (visiblePage + 1) * 10);
 
   return (
     <div className="dashboard-content">
@@ -95,10 +113,27 @@ export function ClientesClient() {
           <p>Lista de contas criadas no app mobile do shopping.</p>
         </div>
 
-        <button className="ghost-button" onClick={() => void loadClientes(page, true)} type="button">
-          <RefreshCcw aria-hidden size={16} />
-          Atualizar
-        </button>
+        <div className="topbar-actions">
+          <label className="store-search admin-list-search">
+            <Search aria-hidden size={15} strokeWidth={1.7} />
+            <input
+              aria-label="Pesquisar clientes"
+              autoComplete="off"
+              onChange={(event) => {
+                setPage(0);
+                setQuery(event.target.value);
+              }}
+              placeholder="Nome, email ou telefone"
+              spellCheck={false}
+              type="search"
+              value={query}
+            />
+          </label>
+          <button className="ghost-button" onClick={() => void loadClientes(true)} type="button">
+            <RefreshCcw aria-hidden size={16} />
+            Atualizar
+          </button>
+        </div>
       </section>
 
       {message ? <p className={getMessageClassName(message)}>{message}</p> : null}
@@ -108,7 +143,7 @@ export function ClientesClient() {
           <h2>Clientes registados</h2>
           <span className="count-pill">
             <Users aria-hidden size={14} />
-            {totalItems}
+            {filteredClientes.length}
           </span>
         </div>
 
@@ -124,8 +159,8 @@ export function ClientesClient() {
               </tr>
             </thead>
             <tbody>
-              {clientes.length > 0 ? (
-                clientes.map((cliente) => (
+              {visibleClientes.length > 0 ? (
+                visibleClientes.map((cliente) => (
                   <tr key={cliente.id ?? cliente.email}>
                     <td>
                       <span className="table-title">
@@ -173,7 +208,13 @@ export function ClientesClient() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5}>{isLoading ? 'A carregar...' : 'Sem clientes registados.'}</td>
+                  <td colSpan={5}>
+                    {isLoading
+                      ? 'A carregar...'
+                      : query.trim()
+                        ? 'Nenhum cliente corresponde à pesquisa.'
+                        : 'Sem clientes registados.'}
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -182,8 +223,8 @@ export function ClientesClient() {
         <Pagination
           isLoading={isLoading}
           onPageChange={setPage}
-          page={page}
-          totalItems={totalItems}
+          page={visiblePage}
+          totalItems={filteredClientes.length}
           totalPages={totalPages}
         />
       </article>

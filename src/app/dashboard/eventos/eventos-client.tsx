@@ -22,6 +22,8 @@ import {
 
 import { EventImage } from '@/components/admin/EventImage';
 import { Pagination } from '@/components/admin/Pagination';
+import { useAdminSearchQuery } from '@/components/admin/useAdminSearchQuery';
+import { matchesSearchQuery } from '@/lib/admin-search';
 import {
   activateEvento,
   ApiError,
@@ -74,7 +76,7 @@ export function EventosClient() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [page, setPage] = useState(0);
-  const [query, setQuery] = useState('');
+  const { deferredQuery, query, setQuery } = useAdminSearchQuery();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const imagePreviewRef = useRef<string | null>(null);
 
@@ -149,22 +151,24 @@ export function EventosClient() {
   }, [closeEditor, isEditorOpen, isSubmitting]);
 
   const filteredEventos = useMemo(() => {
-    const normalizedQuery = normalizeText(query);
-
     return eventos.filter((evento) => {
-      const searchableText = normalizeText(
-        [evento.titulo, evento.descricao, evento.local, evento.criadoPor]
-          .filter(Boolean)
-          .join(' '),
-      );
       const status = getStatusKind(evento.estado);
 
       return (
-        (!normalizedQuery || searchableText.includes(normalizedQuery)) &&
+        matchesSearchQuery(deferredQuery, [
+          evento.id,
+          evento.titulo,
+          evento.descricao,
+          evento.local,
+          evento.criadoPor,
+          evento.estado,
+          evento.dataInicio,
+          evento.dataFim,
+        ]) &&
         (statusFilter === 'all' || statusFilter === status)
       );
     });
-  }, [eventos, query, statusFilter]);
+  }, [deferredQuery, eventos, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredEventos.length / ITEMS_PER_PAGE));
   const visiblePage = Math.min(page, totalPages - 1);
@@ -318,8 +322,10 @@ export function EventosClient() {
             <Search aria-hidden size={14} strokeWidth={1.7} />
             <input
               aria-label="Pesquisar eventos"
+              autoComplete="off"
               onChange={(event) => updateFilters(() => setQuery(event.target.value))}
               placeholder="Pesquisar eventos"
+              spellCheck={false}
               type="search"
               value={query}
             />
@@ -777,14 +783,6 @@ function getActionSuccessMessage(action: StatusAction) {
   }
 
   return 'Evento eliminado com sucesso.';
-}
-
-function normalizeText(value: string) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('pt')
-    .trim();
 }
 
 function revokePreview(reference: { current: string | null }) {

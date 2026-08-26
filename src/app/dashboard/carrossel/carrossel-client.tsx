@@ -22,6 +22,8 @@ import {
 
 import { CarouselImage } from '@/components/admin/CarouselImage';
 import { Pagination } from '@/components/admin/Pagination';
+import { useAdminSearchQuery } from '@/components/admin/useAdminSearchQuery';
+import { matchesSearchQuery } from '@/lib/admin-search';
 import {
   ApiError,
   clearAdminApiCache,
@@ -49,7 +51,7 @@ export function CarrosselClient() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [page, setPage] = useState(0);
-  const [query, setQuery] = useState('');
+  const { deferredQuery, query, setQuery } = useAdminSearchQuery();
   const [slides, setSlides] = useState<CarouselSlide[]>([]);
   const [title, setTitle] = useState('');
   const imagePreviewRef = useRef<string | null>(null);
@@ -132,12 +134,10 @@ export function CarrosselClient() {
   }, [closeEditor, isEditorOpen, isSubmitting]);
 
   const filteredSlides = useMemo(() => {
-    const normalizedQuery = normalizeText(query);
-
     return slides.filter((slide) =>
-      normalizeText(slide.title ?? '').includes(normalizedQuery),
+      matchesSearchQuery(deferredQuery, [slide.id, slide.title]),
     );
-  }, [query, slides]);
+  }, [deferredQuery, slides]);
   const totalPages = Math.max(1, Math.ceil(filteredSlides.length / ITEMS_PER_PAGE));
   const visiblePage = Math.min(page, totalPages - 1);
   const visibleSlides = filteredSlides.slice(
@@ -276,11 +276,13 @@ export function CarrosselClient() {
             <Search aria-hidden size={14} />
             <input
               aria-label="Pesquisar slides"
+              autoComplete="off"
               onChange={(event) => {
                 setPage(0);
                 setQuery(event.target.value);
               }}
               placeholder="Pesquisar slides"
+              spellCheck={false}
               type="search"
               value={query}
             />
@@ -476,13 +478,6 @@ export function CarrosselClient() {
       ) : null}
     </div>
   );
-}
-
-function normalizeText(value: string) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('pt');
 }
 
 function formatDate(value?: string) {

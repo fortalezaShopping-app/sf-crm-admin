@@ -1,12 +1,15 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Check, Send } from 'lucide-react';
+import { Check, Search, Send } from 'lucide-react';
+
+import { useAdminSearchQuery } from '@/components/admin/useAdminSearchQuery';
+import { matchesSearchQuery } from '@/lib/admin-search';
 
 import {
   ApiError,
   listAllLojas,
-  listNotificacoes,
+  listAllNotificacoes,
   marcarNotificacaoComoLida,
   type Loja,
   type Notificacao,
@@ -34,6 +37,7 @@ export function NotificacoesClient() {
   const [markingId, setMarkingId] = useState<number | null>(null);
   const [notifications, setNotifications] = useState<Notificacao[]>([]);
   const [period, setPeriod] = useState<Period>('7d');
+  const { deferredQuery, query, setQuery } = useAdminSearchQuery();
   const [readFilter, setReadFilter] = useState<ReadFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sendToAllStores, setSendToAllStores] = useState(true);
@@ -43,8 +47,8 @@ export function NotificacoesClient() {
     setError(null);
 
     try {
-      const result = await listNotificacoes({ page: 0, size: 100 });
-      setNotifications(result.items);
+      const result = await listAllNotificacoes();
+      setNotifications(result);
     } catch (requestError) {
       setError(getErrorMessage(requestError));
     } finally {
@@ -55,10 +59,10 @@ export function NotificacoesClient() {
   useEffect(() => {
     let isActive = true;
 
-    void listNotificacoes({ page: 0, size: 100 })
+    void listAllNotificacoes()
       .then((result) => {
         if (isActive) {
-          setNotifications(result.items);
+          setNotifications(result);
         }
       })
       .catch((requestError: unknown) => {
@@ -102,11 +106,17 @@ export function NotificacoesClient() {
   );
 
   const selectedStores = useMemo(() => {
-    const normalizedTerm = searchTerm.trim().toLocaleLowerCase('pt');
-
     return lojas.filter((loja) => {
-      const matchesSearch =
-        !normalizedTerm || loja.nome?.toLocaleLowerCase('pt').includes(normalizedTerm);
+      const matchesSearch = matchesSearchQuery(searchTerm, [
+        loja.nome,
+        loja.razaoSocial,
+        loja.nif,
+        loja.categoria,
+        loja.piso,
+        loja.email,
+        loja.telefone,
+        loja.estado,
+      ]);
       const matchesCategory = !category || loja.categoria === category;
 
       return matchesSearch && matchesCategory;
@@ -117,9 +127,22 @@ export function NotificacoesClient() {
     () =>
       notifications.filter((notification) => {
         const matchesReadFilter = readFilter === 'all' || !notification.lida;
-        return matchesReadFilter && matchesPeriod(notification.createdAt, period);
+        const matchesQuery = matchesSearchQuery(deferredQuery, [
+          notification.id,
+          notification.titulo,
+          notification.mensagem,
+          notification.tipo,
+          notification.createdAt,
+          notification.lida ? 'lida' : 'nao lida',
+        ]);
+
+        return (
+          matchesReadFilter &&
+          matchesPeriod(notification.createdAt, period) &&
+          matchesQuery
+        );
       }),
-    [notifications, period, readFilter],
+    [deferredQuery, notifications, period, readFilter],
   );
 
   async function handleMarkAsRead(notification: Notificacao) {
@@ -215,7 +238,22 @@ export function NotificacoesClient() {
       <div className={styles.contentGrid}>
         <section aria-label="Lista de notificações" className={styles.notificationCard}>
           <div className={styles.listHeader}>
-            <span>{readFilter === 'unread' ? 'Não lidas' : 'Todas as notificações'}</span>
+            <span className={styles.listTitle}>
+              {readFilter === 'unread' ? 'Não lidas' : 'Todas as notificações'}
+              <small>{visibleNotifications.length}</small>
+            </span>
+            <label className={styles.listSearch}>
+              <Search aria-hidden size={14} strokeWidth={1.7} />
+              <input
+                aria-label="Pesquisar notificações"
+                autoComplete="off"
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Titulo ou mensagem"
+                spellCheck={false}
+                type="search"
+                value={query}
+              />
+            </label>
             <button onClick={() => void loadNotifications()} type="button">
               Atualizar
             </button>
@@ -258,7 +296,17 @@ export function NotificacoesClient() {
                 </article>
               ))
             ) : (
-              <p className={styles.emptyState}>Não existem notificações neste período.</p>
+              <p
+                className={
+                  query.trim()
+                    ? `${styles.emptyState} ${styles.searchEmptyState}`
+                    : styles.emptyState
+                }
+              >
+                {query.trim()
+                  ? 'Nenhuma notificação corresponde à pesquisa.'
+                  : 'Não existem notificações neste período.'}
+              </p>
             )}
           </div>
         </section>
@@ -273,8 +321,10 @@ export function NotificacoesClient() {
             <label>
               Pesquisar lojas
               <input
+                autoComplete="off"
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Nome da loja"
+                spellCheck={false}
                 type="search"
                 value={searchTerm}
               />

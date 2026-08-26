@@ -14,12 +14,15 @@ import {
   ReceiptText,
   RefreshCw,
   RotateCw,
+  Search,
   ShieldCheck,
   XCircle,
 } from 'lucide-react';
 import Image from 'next/image';
 
 import { Pagination } from '@/components/admin/Pagination';
+import { useAdminSearchQuery } from '@/components/admin/useAdminSearchQuery';
+import { matchesSearchQuery } from '@/lib/admin-search';
 import {
   ApiError,
   clearAdminApiCache,
@@ -27,11 +30,10 @@ import {
   getFaturaImagePath,
   getFaturaOcr,
   getFaturaValidacao,
-  listFaturas,
+  listAllFaturas,
   validarFatura,
   type FaturaAdmin,
   type OcrFatura,
-  type PageResult,
   type ValidacaoFatura,
   type ValidarFaturaRequest,
 } from '@/lib/api';
@@ -41,13 +43,6 @@ import styles from './comprovativos.module.css';
 type StatusFilter = 'all' | 'APPROVED' | 'PENDING_VALIDATION' | 'REJECTED';
 
 const ITEMS_PER_PAGE = 10;
-const emptyResult: PageResult<FaturaAdmin> = {
-  items: [],
-  page: 0,
-  size: ITEMS_PER_PAGE,
-  totalItems: 0,
-  totalPages: 1,
-};
 
 const statusOptions: Array<{ label: string; value: StatusFilter }> = [
   { label: 'Todas', value: 'all' },
@@ -62,7 +57,7 @@ export function ComprovativosClient() {
   const [detail, setDetail] = useState<FaturaAdmin | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detailVersion, setDetailVersion] = useState(0);
-  const [invoices, setInvoices] = useState<PageResult<FaturaAdmin>>(emptyResult);
+  const [invoices, setInvoices] = useState<FaturaAdmin[]>([]);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
@@ -70,6 +65,7 @@ export function ComprovativosClient() {
   const [notice, setNotice] = useState<string | null>(null);
   const [ocr, setOcr] = useState<OcrFatura | null>(null);
   const [page, setPage] = useState(0);
+  const { deferredQuery, query, setQuery } = useAdminSearchQuery();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [validation, setValidation] = useState<ValidacaoFatura | null>(null);
@@ -84,26 +80,24 @@ export function ComprovativosClient() {
           clearAdminApiCache();
         }
 
-        const result = await listFaturas({
-          page,
-          size: ITEMS_PER_PAGE,
+        const result = await listAllFaturas({
           status: statusFilter === 'all' ? undefined : statusFilter,
         });
 
         setInvoices(result);
         setSelectedId((current) => {
-          const stillVisible = result.items.some((invoice) => invoice.id === current);
-          return stillVisible ? current : result.items[0]?.id ?? null;
+          const stillVisible = result.some((invoice) => invoice.id === current);
+          return stillVisible ? current : result[0]?.id ?? null;
         });
       } catch (error) {
-        setInvoices(emptyResult);
+        setInvoices([]);
         setSelectedId(null);
         setListError(getErrorMessage(error, 'Não foi possível carregar as faturas.'));
       } finally {
         setIsLoading(false);
       }
     },
-    [page, statusFilter],
+    [statusFilter],
   );
 
   useEffect(() => {
@@ -157,17 +151,57 @@ export function ComprovativosClient() {
     };
   }, [detailVersion, selectedId]);
 
+  const filteredInvoices = useMemo(
+    () =>
+      invoices.filter((invoice) =>
+        matchesSearchQuery(deferredQuery, [
+          invoice.id,
+          invoice.invoiceNumber,
+          invoice.storeId,
+          invoice.storeName,
+          invoice.issuerTaxId,
+          invoice.customerTaxId,
+          invoice.invoiceDate,
+          invoice.totalAmount,
+          invoice.status,
+          invoice.note,
+        ]),
+      ),
+    [deferredQuery, invoices],
+  );
+  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / ITEMS_PER_PAGE));
+  const visiblePage = Math.min(page, totalPages - 1);
+  const visibleInvoices = filteredInvoices.slice(
+    visiblePage * ITEMS_PER_PAGE,
+    (visiblePage + 1) * ITEMS_PER_PAGE,
+  );
   const selectedInvoice = useMemo(() => {
     if (!selectedId) {
       return null;
     }
 
+    const listedInvoice = filteredInvoices.find((invoice) => invoice.id === selectedId);
+
+    if (!listedInvoice) {
+      return null;
+    }
+
     return detail?.id === selectedId
       ? detail
-      : invoices.items.find((invoice) => invoice.id === selectedId) ?? null;
-  }, [detail, invoices.items, selectedId]);
+      : listedInvoice;
+  }, [detail, filteredInvoices, selectedId]);
   const selectedOcr = detail?.id === selectedId ? ocr : null;
   const selectedValidation = detail?.id === selectedId ? validation : null;
+
+  useEffect(() => {
+    if (isLoading || filteredInvoices.some((invoice) => invoice.id === selectedId)) {
+      return;
+    }
+
+    const firstVisibleId = filteredInvoices[0]?.id ?? null;
+    const timeoutId = window.setTimeout(() => setSelectedId(firstVisibleId), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [filteredInvoices, isLoading, selectedId]);
 
   function changeStatusFilter(nextStatus: StatusFilter) {
     setNotice(null);
@@ -263,8 +297,24 @@ export function ComprovativosClient() {
           ))}
         </div>
 
+        <label className={styles.invoiceSearch}>
+          <Search aria-hidden size={15} strokeWidth={1.7} />
+          <input
+            aria-label="Pesquisar faturas"
+            autoComplete="off"
+            onChange={(event) => {
+              setPage(0);
+              setQuery(event.target.value);
+            }}
+            placeholder="Loja, número, NIF ou valor"
+            spellCheck={false}
+            type="search"
+            value={query}
+          />
+        </label>
+
         <span className={styles.totalCount}>
-          {invoices.totalItems} fatura{invoices.totalItems === 1 ? '' : 's'}
+          {filteredInvoices.length} fatura{filteredInvoices.length === 1 ? '' : 's'}
         </span>
       </div>
 
@@ -301,8 +351,8 @@ export function ComprovativosClient() {
                 <RefreshCw aria-hidden className={styles.spinning} size={22} />
                 <span>A carregar faturas...</span>
               </div>
-            ) : invoices.items.length ? (
-              invoices.items.map((invoice) => (
+            ) : visibleInvoices.length ? (
+              visibleInvoices.map((invoice) => (
                 <button
                   aria-pressed={selectedId === invoice.id}
                   className={
@@ -332,7 +382,11 @@ export function ComprovativosClient() {
             ) : (
               <div className={styles.emptyState}>
                 <FileSearch aria-hidden size={28} strokeWidth={1.5} />
-                <span>Não existem faturas neste estado.</span>
+                <span>
+                  {query.trim()
+                    ? 'Nenhuma fatura corresponde à pesquisa.'
+                    : 'Não existem faturas neste estado.'}
+                </span>
               </div>
             )}
           </div>
@@ -340,9 +394,9 @@ export function ComprovativosClient() {
           <Pagination
             isLoading={isLoading}
             onPageChange={setPage}
-            page={invoices.page}
-            totalItems={invoices.totalItems}
-            totalPages={invoices.totalPages}
+            page={visiblePage}
+            totalItems={filteredInvoices.length}
+            totalPages={totalPages}
           />
         </section>
 

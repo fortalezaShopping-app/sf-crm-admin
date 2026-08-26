@@ -136,10 +136,11 @@
 }
 
 .listHeader {
-  display: flex;
+  display: grid;
   min-height: 46px;
+  grid-template-columns: auto minmax(160px, 260px) auto;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
   border-bottom: 1px solid #e6d8d3;
   color: #8b321f;
   font-size: 13px;
@@ -147,7 +148,60 @@
   padding: 0 18px;
 }
 
+.listTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.listTitle small {
+  display: inline-grid;
+  min-width: 21px;
+  height: 21px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(139, 50, 31, 0.1);
+  color: #8b321f;
+  font-size: 9px;
+  font-weight: 500;
+  padding: 0 5px;
+}
+
+.listSearch {
+  display: flex;
+  min-width: 0;
+  height: 32px;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #d9c9c2;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 0 9px;
+}
+
+.listSearch:focus-within {
+  border-color: #8b321f;
+  box-shadow: 0 0 0 3px rgba(139, 50, 31, 0.1);
+}
+
+.listSearch svg {
+  flex: 0 0 auto;
+  color: #826b60;
+}
+
+.listSearch input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #5c2619;
+  font: inherit;
+  font-size: 11px;
+}
+
 .listHeader button {
+  justify-self: end;
   border: 0;
   background: transparent;
   color: #8b321f;
@@ -260,6 +314,10 @@
   font-size: 12px;
   text-align: center;
   padding: 24px;
+}
+
+.searchEmptyState {
+  min-height: 180px;
 }
 
 .composerCard {
@@ -443,6 +501,22 @@
   .notification,
   .notificationRead {
     padding-inline: 14px;
+  }
+
+  .listHeader {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-block: 8px;
+  }
+
+  .listSearch {
+    width: 100%;
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .listHeader button {
+    grid-column: 2;
+    grid-row: 1;
   }
 
   .composerCard {

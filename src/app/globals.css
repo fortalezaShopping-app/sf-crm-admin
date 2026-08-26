@@ -928,6 +928,11 @@ a {
   font-size: 13px;
 }
 
+.admin-list-search {
+  width: min(100%, 280px);
+  background: var(--surface);
+}
+
 .admin-table th,
 .admin-table td {
   border-bottom: 1px solid var(--border);
@@ -1404,6 +1409,11 @@ a {
     display: grid;
     width: 100%;
     grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .admin-list-search {
+    width: 100%;
+    grid-column: 1 / -1;
   }
 
   .dashboard-heading > .ghost-button {

@@ -14,14 +14,16 @@ import {
   Settings,
   Store,
   Users,
+  X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { ShoppingLogo } from '@/components/brand/ShoppingLogo';
 import type { AdminSession } from '@/lib/admin-session';
 import { ADMIN_AUTH_EXPIRED_EVENT } from '@/lib/api';
+import { normalizeSearchText, withSearchQuery } from '@/lib/admin-search';
 
 import styles from './AdminShell.module.css';
 
@@ -51,7 +53,9 @@ const navItems: NavItem[] = [
 export function AdminShell({ children, initialSession: session }: AdminShellProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [search, setSearch] = useState('');
+  const searchParams = useSearchParams();
+  const activeSearch = searchParams.get('q') ?? '';
+  const [search, setSearch] = useState(activeSearch);
 
   useEffect(() => {
     async function handleAuthExpired() {
@@ -66,6 +70,11 @@ export function AdminShell({ children, initialSession: session }: AdminShellProp
       window.removeEventListener(ADMIN_AUTH_EXPIRED_EVENT, handleAuthExpired);
     };
   }, [router]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setSearch(activeSearch), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [activeSearch]);
 
   const adminLabel = useMemo(
     () => session.nome ?? session.email ?? 'Administrador',
@@ -85,8 +94,19 @@ export function AdminShell({ children, initialSession: session }: AdminShellProp
 
     if (target) {
       router.push(target);
-      setSearch('');
+      setSearch(new URL(target, window.location.origin).searchParams.get('q') ?? '');
     }
+  }
+
+  function handleClearSearch() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('q');
+    const queryString = params.toString();
+
+    setSearch('');
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+      scroll: false,
+    });
   }
 
   return (
@@ -146,14 +166,36 @@ export function AdminShell({ children, initialSession: session }: AdminShellProp
             className={styles.searchShell}
             onSubmit={handleSearch}
           >
-            <Search aria-hidden size={17} strokeWidth={1.7} />
+            <button
+              aria-label="Executar pesquisa"
+              className={styles.searchButton}
+              title="Pesquisar"
+              type="submit"
+            >
+              <Search aria-hidden size={17} strokeWidth={1.7} />
+            </button>
             <input
+              autoComplete="off"
               aria-label="Pesquisar no painel"
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Pesquisar"
+              placeholder="Pesquisar no painel"
+              spellCheck={false}
               type="search"
               value={search}
             />
+            {search ? (
+              <button
+                aria-label="Limpar pesquisa"
+                className={styles.searchButton}
+                onClick={handleClearSearch}
+                title="Limpar"
+                type="button"
+              >
+                <X aria-hidden size={15} strokeWidth={1.8} />
+              </button>
+            ) : (
+              <span aria-hidden className={styles.searchSpacer} />
+            )}
           </form>
         </header>
 
@@ -164,43 +206,44 @@ export function AdminShell({ children, initialSession: session }: AdminShellProp
 }
 
 function getSearchTarget(query: string) {
-  const value = query.trim().toLowerCase();
+  const trimmedQuery = query.trim();
+  const value = normalizeSearchText(trimmedQuery);
 
   if (!value) {
     return null;
   }
 
-  if (value.includes('loja')) {
-    return '/dashboard/lojas';
+  const directTarget = searchTargets.find(({ aliases }) =>
+    aliases.some((alias) => value === alias || value.startsWith(`${alias} `)),
+  );
+
+  if (directTarget) {
+    const hasPrefix = directTarget.aliases.some((alias) => value.startsWith(`${alias} `));
+    const remainingQuery = hasPrefix
+      ? trimmedQuery.split(/\s+/).slice(1).join(' ')
+      : '';
+
+    return withSearchQuery(directTarget.href, remainingQuery);
   }
 
-  if (value.includes('evento') || value.includes('agenda')) {
-    return '/dashboard/eventos';
-  }
-
-  if (value.includes('carrossel') || value.includes('campanha')) {
-    return '/dashboard/carrossel';
-  }
-
-  if (value.includes('analytics') || value.includes('desempenho')) {
-    return '/dashboard/analytics';
-  }
-
-  if (value.includes('cliente')) {
-    return '/dashboard/utilizadores';
-  }
-
-  if (value.includes('fatura') || value.includes('comprov')) {
-    return '/dashboard/comprovativos';
-  }
-
-  if (value.includes('utilizador') || value.includes('admin')) {
-    return '/dashboard/utilizadores';
-  }
-
-  if (value.includes('perfil') || value.includes('conta')) {
-    return '/dashboard/perfil';
-  }
-
-  return '/dashboard';
+  return withSearchQuery('/dashboard/pesquisa', trimmedQuery);
 }
+
+const searchTargets = [
+  { aliases: ['dashboard', 'inicio', 'resumo'], href: '/dashboard' },
+  { aliases: ['loja', 'lojas'], href: '/dashboard/lojas' },
+  { aliases: ['agenda', 'evento', 'eventos'], href: '/dashboard/eventos' },
+  { aliases: ['campanha', 'carrossel', 'slide', 'slides'], href: '/dashboard/carrossel' },
+  {
+    aliases: ['comprovativo', 'comprovativos', 'factura', 'facturas', 'fatura', 'faturas', 'talao', 'taloes'],
+    href: '/dashboard/comprovativos',
+  },
+  {
+    aliases: ['admin', 'cliente', 'clientes', 'utilizador', 'utilizadores', 'usuario', 'usuarios'],
+    href: '/dashboard/utilizadores',
+  },
+  { aliases: ['aviso', 'avisos', 'notificacao', 'notificacoes'], href: '/dashboard/notificacoes' },
+  { aliases: ['analytics', 'desempenho'], href: '/dashboard/analytics' },
+  { aliases: ['conta', 'perfil'], href: '/dashboard/perfil' },
+  { aliases: ['configuracao', 'configuracoes'], href: '/dashboard/configuracoes' },
+] as const;

@@ -1,0 +1,144 @@
+.resultsPanel {
+  overflow: hidden;
+  border: 1px solid rgba(139, 50, 31, 0.16);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 2px 5px rgba(63, 35, 27, 0.1);
+}
+
+.resultGroup + .resultGroup {
+  border-top: 1px solid #e4d2cc;
+}
+
+.groupHeader {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #f4ebe7;
+  padding: 10px 18px;
+}
+
+.groupHeader > span {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  color: #8b321f;
+}
+
+.groupHeader strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.groupHeader small {
+  display: grid;
+  min-width: 24px;
+  min-height: 22px;
+  place-items: center;
+  border-radius: 11px;
+  background: rgba(139, 50, 31, 0.12);
+  font-size: 11px;
+  padding: 2px 7px;
+}
+
+.groupHeader a {
+  color: #8b321f;
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.resultList {
+  display: grid;
+}
+
+.resultItem {
+  display: grid;
+  min-height: 58px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid #eee2de;
+  color: #4c2b22;
+  padding: 10px 18px;
+  text-decoration: none;
+}
+
+.resultItem:last-child {
+  border-bottom: 0;
+}
+
+.resultItem:hover,
+.resultItem:focus-visible {
+  outline: none;
+  background: #fcf7f4;
+}
+
+.resultItem > span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.resultItem strong,
+.resultItem small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resultItem strong {
+  color: #8b321f;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.resultItem small {
+  color: #715b54;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.resultItem b {
+  color: #8b321f;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.emptyState {
+  display: grid;
+  min-height: 260px;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  color: #7a625a;
+  padding: 32px;
+  text-align: center;
+}
+
+.emptyState strong {
+  color: #8b321f;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.emptyState span {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+@media (max-width: 620px) {
+  .groupHeader,
+  .resultItem {
+    padding-inline: 14px;
+  }
+
+  .resultItem {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+}

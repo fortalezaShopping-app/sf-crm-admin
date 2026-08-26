@@ -23,6 +23,8 @@ import {
 
 import { Pagination } from '@/components/admin/Pagination';
 import { StoreImage } from '@/components/admin/StoreImage';
+import { useAdminSearchQuery } from '@/components/admin/useAdminSearchQuery';
+import { matchesSearchQuery } from '@/lib/admin-search';
 import {
   ApiError,
   activateLoja,
@@ -117,7 +119,7 @@ export function LojasClient() {
   const [lojas, setLojas] = useState<Loja[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [page, setPage] = useState(0);
-  const [query, setQuery] = useState('');
+  const { deferredQuery, query, setQuery } = useAdminSearchQuery();
   const [selectedStoreIds, setSelectedStoreIds] = useState<Set<number>>(new Set());
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const formRef = useRef<HTMLFormElement>(null);
@@ -196,28 +198,26 @@ export function LojasClient() {
   );
 
   const filteredLojas = useMemo(() => {
-    const normalizedQuery = normalizeText(query);
-
     return lojas.filter((loja) => {
-      const searchableText = normalizeText(
-        [
+      const matchesQuery = matchesSearchQuery(deferredQuery, [
           loja.nome,
           loja.razaoSocial,
           loja.nif,
           loja.categoria,
+          loja.piso,
           loja.telefone,
           loja.email,
-        ]
-          .filter(Boolean)
-          .join(' '),
-      );
+          loja.endereco,
+          loja.descricao,
+          loja.estado,
+        ]);
 
       return (
-        (!normalizedQuery || searchableText.includes(normalizedQuery)) &&
+        matchesQuery &&
         (statusFilter === 'all' || loja.estado === statusFilter)
       );
     });
-  }, [lojas, query, statusFilter]);
+  }, [deferredQuery, lojas, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredLojas.length / ITEMS_PER_PAGE));
   const visiblePage = Math.min(page, totalPages - 1);
@@ -476,8 +476,10 @@ export function LojasClient() {
             <Search aria-hidden size={14} strokeWidth={1.7} />
             <input
               aria-label="Pesquisar lojas"
+              autoComplete="off"
               onChange={(event) => updateFilters(() => setQuery(event.target.value))}
               placeholder="Pesquisar lojas"
+              spellCheck={false}
               type="search"
               value={query}
             />
@@ -1023,14 +1025,6 @@ function getStatusClassName(status: Loja['estado']) {
   }
 
   return `${styles.statusBadge} ${styles.statusBadgeInactive}`;
-}
-
-function normalizeText(value: string) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('pt')
-    .trim();
 }
 
 function revokePreview(reference: { current: string | null }) {

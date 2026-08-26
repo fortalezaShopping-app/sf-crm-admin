@@ -551,6 +551,22 @@ export function listUtilizadores(role?: UserRole, options: ListOptions = {}) {
   });
 }
 
+export async function listAllUtilizadores(role?: UserRole, pageSize = 100) {
+  const firstPage = await listUtilizadores(role, { page: 0, size: pageSize });
+
+  if (firstPage.totalPages <= 1) {
+    return firstPage.items;
+  }
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: firstPage.totalPages - 1 }, (_, index) =>
+      listUtilizadores(role, { page: index + 1, size: pageSize }),
+    ),
+  );
+
+  return [firstPage, ...remainingPages].flatMap((result) => result.items);
+}
+
 export function createUtilizador(payload: UtilizadorRequest) {
   return apiRequest<UserResponse>('/api/admin/users', {
     body: {
@@ -783,6 +799,22 @@ export function listNotificacoes(options: ListOptions = {}) {
   });
 }
 
+export async function listAllNotificacoes(pageSize = 100) {
+  const firstPage = await listNotificacoes({ page: 0, size: pageSize });
+
+  if (firstPage.totalPages <= 1) {
+    return firstPage.items;
+  }
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: firstPage.totalPages - 1 }, (_, index) =>
+      listNotificacoes({ page: index + 1, size: pageSize }),
+    ),
+  );
+
+  return [firstPage, ...remainingPages].flatMap((result) => result.items);
+}
+
 export function marcarNotificacaoComoLida(id: number) {
   return apiRequest<NotificationResponse>(`/api/notifications/${id}/read`, {
     method: 'PATCH',
@@ -809,6 +841,33 @@ export function listFaturas(options: ListFaturasOptions = {}) {
       totalPages: Math.max(1, data.totalPages ?? 1),
     };
   });
+}
+
+export async function listAllFaturas(
+  options: Pick<ListFaturasOptions, 'status'> = {},
+  pageSize = 100,
+) {
+  const firstPage = await listFaturas({
+    page: 0,
+    size: pageSize,
+    status: options.status,
+  });
+
+  if (firstPage.totalPages <= 1) {
+    return firstPage.items;
+  }
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: firstPage.totalPages - 1 }, (_, index) =>
+      listFaturas({
+        page: index + 1,
+        size: pageSize,
+        status: options.status,
+      }),
+    ),
+  );
+
+  return [firstPage, ...remainingPages].flatMap((result) => result.items);
 }
 
 export function getFatura(id: number) {

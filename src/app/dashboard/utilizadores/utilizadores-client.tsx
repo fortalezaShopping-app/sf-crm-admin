@@ -1,9 +1,11 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { Ban, CircleCheck, Pencil, Plus, RefreshCcw, Save, UserCog, X } from 'lucide-react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { Ban, CircleCheck, Pencil, Plus, RefreshCcw, Save, Search, UserCog, X } from 'lucide-react';
 
 import { Pagination } from '@/components/admin/Pagination';
+import { useAdminSearchQuery } from '@/components/admin/useAdminSearchQuery';
+import { matchesSearchQuery } from '@/lib/admin-search';
 import {
   ApiError,
   activateUtilizador,
@@ -11,8 +13,8 @@ import {
   clearAdminApiCache,
   createUtilizador,
   deactivateUtilizador,
-  listLojas,
-  listUtilizadores,
+  listAllLojas,
+  listAllUtilizadores,
   updateUtilizador,
   type Loja,
   type UserRole,
@@ -64,13 +66,12 @@ export function UtilizadoresClient() {
   const [lojas, setLojas] = useState<Loja[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [page, setPage] = useState(0);
+  const { deferredQuery, query, setQuery } = useAdminSearchQuery();
   const [selectedRole, setSelectedRole] = useState<RoleFilter>('ALL');
-  const [totalItems, setTotalItems] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
   const [utilizadores, setUtilizadores] = useState<Utilizador[]>([]);
 
   const loadUtilizadores = useCallback(
-    async (targetPage: number, bypassCache = false) => {
+    async (bypassCache = false) => {
       setIsLoading(true);
       setMessage(null);
 
@@ -80,10 +81,8 @@ export function UtilizadoresClient() {
         }
 
         const role = selectedRole === 'ALL' ? undefined : selectedRole;
-        const result = await listUtilizadores(role, { page: targetPage, size: 10 });
-        setUtilizadores(result.items);
-        setTotalItems(result.totalItems);
-        setTotalPages(result.totalPages);
+        const result = await listAllUtilizadores(role);
+        setUtilizadores(result);
       } catch (error) {
         setMessage(getErrorMessage(error));
       } finally {
@@ -94,13 +93,21 @@ export function UtilizadoresClient() {
   );
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => void loadUtilizadores(page), 0);
+    const timeoutId = window.setTimeout(() => void loadUtilizadores(), 0);
     return () => window.clearTimeout(timeoutId);
-  }, [loadUtilizadores, page]);
+  }, [loadUtilizadores]);
 
   useEffect(() => {
-    listLojas({ size: 100 })
-      .then((result) => setLojas(result.items))
+    listAllLojas()
+      .then((result) =>
+        setLojas(
+          [...result].sort((left, right) =>
+            (left.nome ?? '').localeCompare(right.nome ?? '', 'pt', {
+              sensitivity: 'base',
+            }),
+          ),
+        ),
+      )
       .catch(() => setLojas([]));
   }, []);
 
@@ -141,7 +148,7 @@ export function UtilizadoresClient() {
       );
       resetForm();
       setPage(0);
-      await loadUtilizadores(0, true);
+      await loadUtilizadores(true);
     } catch (error) {
       setMessage(getErrorMessage(error));
     } finally {
@@ -163,7 +170,7 @@ export function UtilizadoresClient() {
     try {
       await deactivateUtilizador(utilizador.id);
       setMessage('Utilizador desativado com sucesso.');
-      await loadUtilizadores(page, true);
+      await loadUtilizadores(true);
     } catch (error) {
       setMessage(getErrorMessage(error));
     } finally {
@@ -185,7 +192,7 @@ export function UtilizadoresClient() {
     try {
       await activateUtilizador(utilizador.id);
       setMessage('Utilizador ativado com sucesso.');
-      await loadUtilizadores(page, true);
+      await loadUtilizadores(true);
     } catch (error) {
       setMessage(getErrorMessage(error));
     } finally {
@@ -226,6 +233,28 @@ export function UtilizadoresClient() {
     setForm({ ...initialFormState, role: getCreationRole(role) });
   }
 
+  const filteredUtilizadores = useMemo(
+    () =>
+      utilizadores.filter((utilizador) =>
+        matchesSearchQuery(deferredQuery, [
+          utilizador.id,
+          utilizador.nome,
+          utilizador.email,
+          utilizador.telefone,
+          utilizador.role,
+          utilizador.roles,
+          utilizador.estado,
+        ]),
+      ),
+    [deferredQuery, utilizadores],
+  );
+  const totalPages = Math.max(1, Math.ceil(filteredUtilizadores.length / 10));
+  const visiblePage = Math.min(page, totalPages - 1);
+  const visibleUtilizadores = filteredUtilizadores.slice(
+    visiblePage * 10,
+    (visiblePage + 1) * 10,
+  );
+
   return (
     <div className="dashboard-content">
       <section className="dashboard-heading">
@@ -236,6 +265,21 @@ export function UtilizadoresClient() {
         </div>
 
         <div className="topbar-actions">
+          <label className="store-search admin-list-search">
+            <Search aria-hidden size={15} strokeWidth={1.7} />
+            <input
+              aria-label="Pesquisar utilizadores"
+              autoComplete="off"
+              onChange={(event) => {
+                setPage(0);
+                setQuery(event.target.value);
+              }}
+              placeholder="Nome, email ou telefone"
+              spellCheck={false}
+              type="search"
+              value={query}
+            />
+          </label>
           <select
             aria-label="Filtrar por role"
             className="table-select"
@@ -250,7 +294,7 @@ export function UtilizadoresClient() {
           </select>
           <button
             className="ghost-button"
-            onClick={() => void loadUtilizadores(page, true)}
+            onClick={() => void loadUtilizadores(true)}
             type="button"
           >
             <RefreshCcw aria-hidden size={16} />
@@ -268,7 +312,7 @@ export function UtilizadoresClient() {
               <h2>{roleFilterOptions.find((role) => role.value === selectedRole)?.label}</h2>
               <p className="panel-subtitle">Contas registadas na API do Shopping Fortaleza</p>
             </div>
-            <span className="count-pill">{totalItems}</span>
+            <span className="count-pill">{filteredUtilizadores.length}</span>
           </div>
 
           <div className="table-scroll">
@@ -282,8 +326,8 @@ export function UtilizadoresClient() {
                 </tr>
               </thead>
               <tbody>
-                {utilizadores.length > 0 ? (
-                  utilizadores.map((utilizador) => (
+                {visibleUtilizadores.length > 0 ? (
+                  visibleUtilizadores.map((utilizador) => (
                     <tr key={utilizador.id ?? utilizador.email}>
                       <td>
                         <span className="user-cell">
@@ -347,7 +391,11 @@ export function UtilizadoresClient() {
                 ) : (
                   <tr>
                     <td colSpan={4}>
-                      {isLoading ? 'A carregar...' : 'Sem utilizadores nesta categoria.'}
+                      {isLoading
+                        ? 'A carregar...'
+                        : query.trim()
+                          ? 'Nenhum utilizador corresponde à pesquisa.'
+                          : 'Sem utilizadores nesta categoria.'}
                     </td>
                   </tr>
                 )}
@@ -358,8 +406,8 @@ export function UtilizadoresClient() {
           <Pagination
             isLoading={isLoading}
             onPageChange={setPage}
-            page={page}
-            totalItems={totalItems}
+            page={visiblePage}
+            totalItems={filteredUtilizadores.length}
             totalPages={totalPages}
           />
         </article>

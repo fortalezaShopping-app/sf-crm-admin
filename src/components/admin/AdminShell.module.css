@@ -99,7 +99,7 @@
   display: grid;
   width: min(100%, 430px);
   min-height: 42px;
-  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-columns: 26px minmax(0, 1fr) 26px;
   align-items: center;
   gap: 8px;
   border: 1px solid #9a3a24;
@@ -107,6 +107,30 @@
   background: rgba(255, 255, 255, 0.12);
   color: #8b321f;
   padding: 0 14px;
+}
+
+.searchButton {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #8b321f;
+  padding: 0;
+}
+
+.searchButton:hover,
+.searchButton:focus-visible {
+  background: rgba(139, 50, 31, 0.1);
+  outline: none;
+}
+
+.searchSpacer {
+  width: 26px;
+  height: 26px;
 }
 
 .searchShell:focus-within {
