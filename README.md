@@ -36,6 +36,14 @@ lojas. A variavel e exclusiva do servidor e nao deve usar o prefixo `NEXT_PUBLIC
 Dados reais recebidos da API/JWT tem prioridade sobre esta lista. Depois de alterar
 a configuracao, o lojista deve iniciar uma nova sessao.
 
+As associacoes temporarias confirmadas para os testes atuais sao:
+
+- `afriteste@teste.com` / utilizador `8`: Africell, loja `9`;
+- `calvin@teste.com` / utilizador `9`: Calvin Klein, loja `64`.
+
+Entradas em `SF_MERCHANT_STORE_MAP` substituem estes defaults quando usam a mesma
+chave.
+
 ## Estrutura
 
 - `/login`: autenticacao de administradores, gestores e lojistas, com encaminhamento

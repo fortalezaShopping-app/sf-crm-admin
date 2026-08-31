@@ -62,8 +62,19 @@ export async function authenticateBackoffice(credentials: LoginEmailRequest) {
     throw new BackendApiError('A API respondeu sem token.', 502, login);
   }
 
+  const temporaryStoreId = loginPath.endsWith('/admin/login')
+    ? undefined
+    : getTemporaryMerchantStoreId({
+        email: login.email ?? credentials.email,
+        id: login.id,
+      });
   const explicitRole = normalizeAuthRole(login.role) ?? getTokenRole(token);
-  const role = explicitRole ?? (loginPath.endsWith('/admin/login') ? 'ADMIN' : 'CUSTOMER');
+  const role = explicitRole ??
+    (temporaryStoreId
+      ? 'STORE_USER'
+      : loginPath.endsWith('/admin/login')
+        ? 'ADMIN'
+        : 'CUSTOMER');
 
   if (!isBackofficeRole(role)) {
     throw new BackendApiError(
@@ -73,7 +84,15 @@ export async function authenticateBackoffice(credentials: LoginEmailRequest) {
     );
   }
 
-  const session = await resolveAdminSession(token, login, credentials.email, role);
+  const session = await resolveAdminSession(
+    token,
+    {
+      ...login,
+      storeId: login.storeId ?? temporaryStoreId,
+    },
+    credentials.email,
+    role,
+  );
   return { session, token };
 }
 
