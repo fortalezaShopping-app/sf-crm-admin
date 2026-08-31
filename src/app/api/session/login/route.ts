@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
 
-import { ADMIN_TOKEN_COOKIE } from '@/lib/admin-session';
+import {
+  ADMIN_TOKEN_COOKIE,
+  BACKOFFICE_ROLE_COOKIE,
+  BACKOFFICE_STORE_COOKIE,
+  getSessionDestination,
+} from '@/lib/admin-session';
 import type { LoginEmailRequest } from '@/lib/api';
-import { authenticateAdmin, BackendApiError } from '@/lib/server-backend';
+import { authenticateBackoffice, BackendApiError } from '@/lib/server-backend';
 
 export async function POST(request: Request) {
   const isFormSubmission = request.headers
@@ -19,27 +24,37 @@ export async function POST(request: Request) {
       );
     }
 
-    const { session, token } = await authenticateAdmin({
+    const { session, token } = await authenticateBackoffice({
       email: credentials.email.trim(),
       password: credentials.password,
     });
+    const redirectTo = getSessionDestination(session);
     const response = isFormSubmission
       ? new NextResponse(null, {
-          headers: { Location: '/dashboard' },
+          headers: { Location: redirectTo },
           status: 303,
         })
-      : NextResponse.json({ session });
+      : NextResponse.json({ redirectTo, session });
     const maxAge = session.expiresAt
       ? Math.max(0, Math.floor((session.expiresAt - Date.now()) / 1000))
       : 8 * 60 * 60;
 
-    response.cookies.set(ADMIN_TOKEN_COOKIE, token, {
+    const cookieOptions = {
       httpOnly: true,
       maxAge,
       path: '/',
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
-    });
+    } as const;
+
+    response.cookies.set(ADMIN_TOKEN_COOKIE, token, cookieOptions);
+    response.cookies.set(BACKOFFICE_ROLE_COOKIE, session.role, cookieOptions);
+
+    if (session.storeId) {
+      response.cookies.set(BACKOFFICE_STORE_COOKIE, String(session.storeId), cookieOptions);
+    } else {
+      response.cookies.delete(BACKOFFICE_STORE_COOKIE);
+    }
 
     return response;
   } catch (error) {

@@ -3,20 +3,23 @@ import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 
 import { ShoppingLogo } from '@/components/brand/ShoppingLogo';
+import { getSessionDestination } from '@/lib/admin-session';
 import { getAuthenticatedAdminSession } from '@/lib/server-auth';
 
 import { LoginForm } from './login-form';
 import styles from './login.module.css';
 
 export default async function LoginPage() {
-  if (await getAuthenticatedAdminSession()) {
-    redirect('/dashboard');
+  const session = await getAuthenticatedAdminSession();
+
+  if (session) {
+    redirect(getSessionDestination(session));
   }
 
   return (
     <main className={styles.page}>
       <div className={styles.loginShell}>
-        <h1 className={styles.panelTitle}>Admin Panel</h1>
+        <h1 className={styles.panelTitle}>Painel de gestão</h1>
 
         <section className={styles.card} aria-labelledby="login-title">
           <div className={styles.logo}>

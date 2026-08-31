@@ -14,5 +14,9 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
+  if (session.role === 'STORE_USER') {
+    redirect('/lojista');
+  }
+
   return <AdminShell initialSession={session}>{children}</AdminShell>;
 }

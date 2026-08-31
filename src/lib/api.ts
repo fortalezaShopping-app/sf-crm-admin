@@ -6,9 +6,14 @@ export type LoginEmailRequest = {
 };
 
 export type LoginResponse = {
+  accessToken?: string;
+  access_token?: string;
   email?: string;
   id?: number;
+  jwt?: string;
   name?: string;
+  role?: UserRole | string;
+  storeId?: number;
   token?: string;
 };
 
@@ -351,6 +356,32 @@ export type DashboardSummary = {
   }>;
 };
 
+export type StorePurchaseScanRequest = {
+  qrContent: string;
+  storeId: number;
+};
+
+export type StorePurchaseScanResponse = {
+  customerId?: number;
+  customerName?: string;
+  expiresAt?: string;
+  purchaseId: string;
+  status?: string;
+  storeId?: number;
+  storeName?: string;
+};
+
+export type StorePurchaseResponse = {
+  amount?: number;
+  customerId?: number;
+  customerName?: string;
+  points?: number;
+  purchaseId?: string;
+  status?: string;
+  storeId?: number;
+  storeName?: string;
+};
+
 type ApiRequestOptions = Omit<RequestInit, 'body' | 'cache'> & {
   body?: unknown;
   bypassCache?: boolean;
@@ -380,12 +411,31 @@ export class ApiError extends Error {
 }
 
 export function loginAdminSession(payload: LoginEmailRequest) {
-  return apiRequest<{ session: AdminSession }>('/api/session/login', {
+  return apiRequest<{ redirectTo: string; session: AdminSession }>('/api/session/login', {
     body: payload,
     cacheTtlMs: 0,
     method: 'POST',
     sameOrigin: true,
   });
+}
+
+export function scanStorePurchase(payload: StorePurchaseScanRequest) {
+  return apiRequest<StorePurchaseScanResponse>('/api/store/purchases/scan', {
+    body: payload,
+    cacheTtlMs: 0,
+    method: 'POST',
+  });
+}
+
+export function confirmStorePurchase(purchaseId: string, amount: number) {
+  return apiRequest<StorePurchaseResponse>(
+    `/api/store/purchases/${encodeURIComponent(purchaseId)}/confirm`,
+    {
+      body: { amount },
+      cacheTtlMs: 0,
+      method: 'POST',
+    },
+  );
 }
 
 export function getDashboardSummary(bypassCache = false) {
@@ -418,6 +468,43 @@ export async function listAllLojas(pageSize = 100) {
   const remainingPages = await Promise.all(
     Array.from({ length: firstPage.totalPages - 1 }, (_, index) =>
       listLojas({ page: index + 1, size: pageSize }),
+    ),
+  );
+
+  return [firstPage, ...remainingPages].flatMap((result) => result.items);
+}
+
+export function listPublicLojas(options: ListOptions = {}) {
+  const pagination = normalizePagination(options);
+
+  return apiRequest<StorePageResponse>(
+    `/api/public/stores${toQueryString({
+      ...pagination,
+      sort: 'name,asc',
+    })}`,
+  ).then((data) => {
+    const content = Array.isArray(data.content) ? data.content : [];
+
+    return {
+      items: content.map(toLoja),
+      page: data.number ?? pagination.page,
+      size: data.size ?? pagination.size,
+      totalItems: data.totalElements ?? content.length,
+      totalPages: Math.max(1, data.totalPages ?? 1),
+    } satisfies PageResult<Loja>;
+  });
+}
+
+export async function listAllPublicLojas(pageSize = 100) {
+  const firstPage = await listPublicLojas({ page: 0, size: pageSize });
+
+  if (firstPage.totalPages <= 1) {
+    return firstPage.items;
+  }
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: firstPage.totalPages - 1 }, (_, index) =>
+      listPublicLojas({ page: index + 1, size: pageSize }),
     ),
   );
 
@@ -496,6 +583,11 @@ export function getLojaImagePath(id: number, version?: number) {
 export function getLojaLogoPath(id: number, version?: number) {
   const query = version ? `?v=${version}` : '';
   return `/api/backend/api/admin/stores/${id}/logo${query}`;
+}
+
+export function getPublicLojaLogoPath(id: number, version?: number) {
+  const query = version ? `?v=${version}` : '';
+  return `/api/backend/api/public/stores/${id}/logo${query}`;
 }
 
 export function getLojaInvoiceTemplatePath(id: number, version?: number) {

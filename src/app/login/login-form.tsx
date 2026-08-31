@@ -24,8 +24,8 @@ export function LoginForm() {
     setIsSubmitting(true);
 
     try {
-      await loginAdminSession({ email, password });
-      router.replace('/dashboard');
+      const result = await loginAdminSession({ email, password });
+      router.replace(result.redirectTo);
       router.refresh();
     } catch (loginError) {
       setError(getLoginErrorMessage(loginError));
