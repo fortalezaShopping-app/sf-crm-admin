@@ -45,6 +45,14 @@ async function proxyRequest(request: Request, context: ProxyContext) {
   }
 
   const targetUrl = await getTargetUrl(request, context);
+
+  if (targetUrl.pathname.startsWith('/api/store/purchases')) {
+    return NextResponse.json(
+      { message: 'Use o fluxo protegido da area do lojista.' },
+      { status: 403 },
+    );
+  }
+
   const method = request.method.toUpperCase();
   const body = method === 'GET' || method === 'HEAD' ? undefined : await request.arrayBuffer();
 

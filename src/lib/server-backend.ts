@@ -99,15 +99,25 @@ export async function resolveAdminSession(
     throw new BackendApiError('A conta nao tem acesso ao painel de gestao.', 403, profile);
   }
 
+  const storeId = toPositiveInteger(profile.storeId) ??
+    getTokenStoreId(token) ??
+    toPositiveInteger(login.storeId);
+
+  if (role === 'STORE_USER' && !storeId) {
+    throw new BackendApiError(
+      'A conta de lojista nao tem uma loja associada. Contacte o administrador.',
+      403,
+      profile,
+    );
+  }
+
   return {
     email: profile.email ?? login.email ?? fallbackEmail,
     expiresAt: getTokenExpiresAt(token),
     id: profile.id ?? login.id,
     nome: profile.name ?? login.name,
     role,
-    storeId: toPositiveInteger(profile.storeId) ??
-      toPositiveInteger(login.storeId) ??
-      getTokenStoreId(token),
+    storeId,
   };
 }
 

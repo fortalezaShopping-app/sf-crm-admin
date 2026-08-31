@@ -21,5 +21,17 @@ export default async function MerchantPage() {
     redirect('/dashboard');
   }
 
-  return <MerchantWorkspace initialSession={session} />;
+  if (!session.storeId) {
+    redirect('/login?error=store-association');
+  }
+
+  return (
+    <MerchantWorkspace
+      initialSession={{
+        ...session,
+        role: 'STORE_USER',
+        storeId: session.storeId,
+      }}
+    />
+  );
 }

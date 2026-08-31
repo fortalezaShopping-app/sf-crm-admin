@@ -10,6 +10,7 @@ import {
   normalizeAuthRole,
 } from '@/lib/admin-session';
 import { resolveAdminSession } from '@/lib/server-backend';
+import { readStoreBinding } from '@/lib/server-store-binding';
 
 export async function getAdminToken() {
   const token = (await cookies()).get(ADMIN_TOKEN_COOKIE)?.value;
@@ -31,13 +32,16 @@ export async function getAuthenticatedAdminSession() {
 
   try {
     const role = normalizeAuthRole(cookieStore.get(BACKOFFICE_ROLE_COOKIE)?.value);
-    const storeId = Number(cookieStore.get(BACKOFFICE_STORE_COOKIE)?.value);
+    const storeId = await readStoreBinding(
+      cookieStore.get(BACKOFFICE_STORE_COOKIE)?.value,
+      token,
+    );
 
     return await resolveAdminSession(
       token,
       {
         role: role ?? undefined,
-        storeId: Number.isSafeInteger(storeId) && storeId > 0 ? storeId : undefined,
+        storeId,
       },
       undefined,
       role,

@@ -8,6 +8,7 @@ import {
 } from '@/lib/admin-session';
 import type { LoginEmailRequest } from '@/lib/api';
 import { authenticateBackoffice, BackendApiError } from '@/lib/server-backend';
+import { createStoreBinding } from '@/lib/server-store-binding';
 
 export async function POST(request: Request) {
   const isFormSubmission = request.headers
@@ -51,7 +52,11 @@ export async function POST(request: Request) {
     response.cookies.set(BACKOFFICE_ROLE_COOKIE, session.role, cookieOptions);
 
     if (session.storeId) {
-      response.cookies.set(BACKOFFICE_STORE_COOKIE, String(session.storeId), cookieOptions);
+      response.cookies.set(
+        BACKOFFICE_STORE_COOKIE,
+        await createStoreBinding(session.storeId, token),
+        cookieOptions,
+      );
     } else {
       response.cookies.delete(BACKOFFICE_STORE_COOKIE);
     }

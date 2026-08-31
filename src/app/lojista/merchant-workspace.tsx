@@ -9,6 +9,7 @@ import {
   CircleDollarSign,
   Keyboard,
   LoaderCircle,
+  LockKeyhole,
   LogOut,
   QrCode,
   RotateCcw,
@@ -23,7 +24,6 @@ import {
   FormEvent,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -33,8 +33,8 @@ import type { AdminSession } from '@/lib/admin-session';
 import {
   ApiError,
   confirmStorePurchase,
+  getPublicLoja,
   getPublicLojaLogoPath,
-  listAllPublicLojas,
   scanStorePurchase,
 } from '@/lib/api';
 import type {
@@ -47,9 +47,10 @@ import styles from './lojista.module.css';
 
 type FlowStep = 'amount' | 'scan' | 'success';
 type CameraState = 'active' | 'denied' | 'idle' | 'starting' | 'unavailable';
+type MerchantSession = AdminSession & { role: 'STORE_USER'; storeId: number };
 
 type MerchantWorkspaceProps = {
-  initialSession: AdminSession;
+  initialSession: MerchantSession;
 };
 
 export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
@@ -57,12 +58,8 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerControlsRef = useRef<IScannerControls | null>(null);
   const requestInFlightRef = useRef(false);
-  const [stores, setStores] = useState<Loja[]>([]);
-  const [storesLoading, setStoresLoading] = useState(true);
-  const [storesError, setStoresError] = useState<string | null>(null);
-  const [selectedStoreId, setSelectedStoreId] = useState<number | undefined>(
-    initialSession.storeId,
-  );
+  const [store, setStore] = useState<Loja | undefined>();
+  const [storeError, setStoreError] = useState<string | null>(null);
   const [step, setStep] = useState<FlowStep>('scan');
   const [cameraState, setCameraState] = useState<CameraState>('idle');
   const [manualMode, setManualMode] = useState(false);
@@ -73,14 +70,6 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const storageKey = useMemo(
-    () => `sf-merchant-store:${initialSession.id ?? initialSession.email ?? 'session'}`,
-    [initialSession.email, initialSession.id],
-  );
-  const selectedStore = useMemo(
-    () => stores.find((store) => store.id === selectedStoreId),
-    [selectedStoreId, stores],
-  );
   const accountLabel = initialSession.nome ?? initialSession.email ?? 'Lojista';
 
   const stopScanner = useCallback((updateState = true) => {
@@ -106,49 +95,32 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
   useEffect(() => {
     let active = true;
 
-    async function loadStores() {
-      setStoresLoading(true);
-      setStoresError(null);
+    async function loadStore() {
+      setStoreError(null);
 
       try {
-        const result = await listAllPublicLojas();
+        const result = await getPublicLoja(initialSession.storeId);
 
         if (!active) {
           return;
         }
 
-        setStores(result);
-
-        if (initialSession.storeId) {
-          setSelectedStoreId(initialSession.storeId);
-          return;
-        }
-
-        const storedId = Number(window.localStorage.getItem(storageKey));
-        const rememberedStore = result.find((store) => store.id === storedId);
-
-        if (rememberedStore?.id) {
-          setSelectedStoreId(rememberedStore.id);
-        } else if (result.length === 1 && result[0].id) {
-          setSelectedStoreId(result[0].id);
-        }
+        setStore(result);
       } catch (loadError) {
         if (active) {
-          setStoresError(getErrorMessage(loadError, 'Nao foi possivel carregar as lojas.'));
-        }
-      } finally {
-        if (active) {
-          setStoresLoading(false);
+          setStoreError(
+            getErrorMessage(loadError, 'Nao foi possivel carregar a loja associada.'),
+          );
         }
       }
     }
 
-    void loadStores();
+    void loadStore();
 
     return () => {
       active = false;
     };
-  }, [initialSession.storeId, storageKey]);
+  }, [initialSession.storeId]);
 
   useEffect(() => () => stopScanner(false), [stopScanner]);
 
@@ -159,27 +131,7 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
     router.refresh();
   }
 
-  function handleStoreChange(value: string) {
-    stopScanner();
-    const storeId = Number(value);
-    const nextStoreId = Number.isSafeInteger(storeId) && storeId > 0 ? storeId : undefined;
-
-    setSelectedStoreId(nextStoreId);
-    setError(null);
-
-    if (nextStoreId) {
-      window.localStorage.setItem(storageKey, String(nextStoreId));
-    } else {
-      window.localStorage.removeItem(storageKey);
-    }
-  }
-
   async function startScanner() {
-    if (!selectedStoreId) {
-      setError('Selecione a loja antes de ler o QR do cliente.');
-      return;
-    }
-
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
       setCameraState('unavailable');
       setError('A camara requer uma ligacao HTTPS e um navegador compativel.');
@@ -235,11 +187,6 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
   async function processQr(qrContent: string) {
     const normalizedQr = qrContent.trim();
 
-    if (!selectedStoreId) {
-      setError('Selecione a loja antes de validar o cliente.');
-      return;
-    }
-
     if (!normalizedQr) {
       setError('Insira um codigo QR valido.');
       return;
@@ -255,10 +202,7 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
     setIsSubmitting(true);
 
     try {
-      const result = await scanStorePurchase({
-        qrContent: normalizedQr,
-        storeId: selectedStoreId,
-      });
+      const result = await scanStorePurchase({ qrContent: normalizedQr });
 
       if (!result.purchaseId) {
         throw new Error('A API nao devolveu o identificador da compra.');
@@ -377,39 +321,21 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
             <h1>Registar compra</h1>
           </div>
 
-          <label className={styles.storeField}>
-            <span>Loja</span>
-            <span className={styles.selectShell}>
-              <Store aria-hidden size={17} strokeWidth={1.7} />
-              <select
-                aria-label="Loja da compra"
-                disabled={
-                  Boolean(initialSession.storeId) ||
-                  storesLoading ||
-                  isSubmitting ||
-                  cameraState === 'active' ||
-                  cameraState === 'starting' ||
-                  step !== 'scan'
-                }
-                onChange={(event) => handleStoreChange(event.target.value)}
-                value={selectedStoreId ?? ''}
-              >
-                <option value="">
-                  {storesLoading ? 'A carregar lojas...' : 'Selecionar loja'}
-                </option>
-                {stores.map((store) => (
-                  <option key={store.id ?? store.nome} value={store.id}>
-                    {store.nome ?? `Loja ${store.id}`}
-                  </option>
-                ))}
-                {initialSession.storeId && !selectedStore ? (
-                  <option value={initialSession.storeId}>
-                    Loja #{initialSession.storeId}
-                  </option>
-                ) : null}
-              </select>
-            </span>
-          </label>
+          <div className={styles.storeField}>
+            <span>Loja associada</span>
+            <div className={styles.assignedStore}>
+              <MerchantStoreLogo
+                key={initialSession.storeId}
+                store={store}
+                storeId={initialSession.storeId}
+              />
+              <span className={styles.assignedStoreCopy}>
+                <strong>{store?.nome ?? `Loja #${initialSession.storeId}`}</strong>
+                <small>Conta vinculada</small>
+              </span>
+              <LockKeyhole aria-hidden size={17} strokeWidth={1.7} />
+            </div>
+          </div>
         </div>
 
         <ol className={styles.steps} aria-label="Progresso do registo da compra">
@@ -418,9 +344,9 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
           <ProgressStep active={step === 'success'} complete={false} index={3} label="Concluído" />
         </ol>
 
-        {storesError ? (
+        {storeError ? (
           <p className={styles.inlineError} role="alert">
-            {storesError}
+            {storeError}
           </p>
         ) : null}
 
@@ -474,7 +400,7 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
                   ) : (
                     <button
                       className={styles.primaryButton}
-                      disabled={isSubmitting || storesLoading}
+                      disabled={isSubmitting}
                       onClick={() => void startScanner()}
                       type="button"
                     >
@@ -502,13 +428,13 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
               <aside className={styles.detailsColumn}>
                 <div className={styles.storeSummary}>
                   <MerchantStoreLogo
-                    key={selectedStoreId ?? 'no-store'}
-                    store={selectedStore}
-                    storeId={selectedStoreId}
+                    key={initialSession.storeId}
+                    store={store}
+                    storeId={initialSession.storeId}
                   />
                   <div>
-                    <span>Loja da compra</span>
-                    <strong>{selectedStore?.nome ?? (selectedStoreId ? `Loja #${selectedStoreId}` : 'Por selecionar')}</strong>
+                    <span>Loja associada</span>
+                    <strong>{store?.nome ?? `Loja #${initialSession.storeId}`}</strong>
                   </div>
                 </div>
 
@@ -539,7 +465,7 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
                   </form>
                 ) : (
                   <div className={styles.statusList}>
-                    <StatusRow complete={Boolean(selectedStoreId)} label="Loja selecionada" />
+                    <StatusRow complete label="Loja associada" />
                     <StatusRow complete={cameraState === 'active'} label="Câmara ativa" />
                     <StatusRow complete={false} label="Cliente validado" />
                   </div>
@@ -575,7 +501,7 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
                 <dl className={styles.purchaseDetails}>
                   <div>
                     <dt>Loja</dt>
-                    <dd>{scanResult.storeName ?? selectedStore?.nome ?? `Loja #${selectedStoreId}`}</dd>
+                    <dd>{scanResult.storeName ?? store?.nome ?? `Loja #${initialSession.storeId}`}</dd>
                   </div>
                   <div>
                     <dt>Estado</dt>
@@ -648,7 +574,7 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
                 </div>
                 <div>
                   <dt>Loja</dt>
-                  <dd>{purchase.storeName ?? selectedStore?.nome ?? `Loja #${selectedStoreId}`}</dd>
+                  <dd>{purchase.storeName ?? store?.nome ?? `Loja #${initialSession.storeId}`}</dd>
                 </div>
               </dl>
 

@@ -358,7 +358,6 @@ export type DashboardSummary = {
 
 export type StorePurchaseScanRequest = {
   qrContent: string;
-  storeId: number;
 };
 
 export type StorePurchaseScanResponse = {
@@ -420,20 +419,22 @@ export function loginAdminSession(payload: LoginEmailRequest) {
 }
 
 export function scanStorePurchase(payload: StorePurchaseScanRequest) {
-  return apiRequest<StorePurchaseScanResponse>('/api/store/purchases/scan', {
+  return apiRequest<StorePurchaseScanResponse>('/api/merchant/purchases/scan', {
     body: payload,
     cacheTtlMs: 0,
     method: 'POST',
+    sameOrigin: true,
   });
 }
 
 export function confirmStorePurchase(purchaseId: string, amount: number) {
   return apiRequest<StorePurchaseResponse>(
-    `/api/store/purchases/${encodeURIComponent(purchaseId)}/confirm`,
+    `/api/merchant/purchases/${encodeURIComponent(purchaseId)}/confirm`,
     {
       body: { amount },
       cacheTtlMs: 0,
       method: 'POST',
+      sameOrigin: true,
     },
   );
 }
@@ -474,41 +475,8 @@ export async function listAllLojas(pageSize = 100) {
   return [firstPage, ...remainingPages].flatMap((result) => result.items);
 }
 
-export function listPublicLojas(options: ListOptions = {}) {
-  const pagination = normalizePagination(options);
-
-  return apiRequest<StorePageResponse>(
-    `/api/public/stores${toQueryString({
-      ...pagination,
-      sort: 'name,asc',
-    })}`,
-  ).then((data) => {
-    const content = Array.isArray(data.content) ? data.content : [];
-
-    return {
-      items: content.map(toLoja),
-      page: data.number ?? pagination.page,
-      size: data.size ?? pagination.size,
-      totalItems: data.totalElements ?? content.length,
-      totalPages: Math.max(1, data.totalPages ?? 1),
-    } satisfies PageResult<Loja>;
-  });
-}
-
-export async function listAllPublicLojas(pageSize = 100) {
-  const firstPage = await listPublicLojas({ page: 0, size: pageSize });
-
-  if (firstPage.totalPages <= 1) {
-    return firstPage.items;
-  }
-
-  const remainingPages = await Promise.all(
-    Array.from({ length: firstPage.totalPages - 1 }, (_, index) =>
-      listPublicLojas({ page: index + 1, size: pageSize }),
-    ),
-  );
-
-  return [firstPage, ...remainingPages].flatMap((result) => result.items);
+export function getPublicLoja(id: number) {
+  return apiRequest<StoreResponse>(`/api/public/stores/${id}`).then(toLoja);
 }
 
 export function createLoja(
