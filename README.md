@@ -22,9 +22,24 @@ No navegador, as chamadas passam por `/api/backend/*` no proprio Next.js. Isso e
 bloqueio de CORS durante o desenvolvimento e mantem a rota real da API em HTTPS no
 servidor.
 
+### Associacao temporaria de lojistas
+
+Enquanto a API nao devolver `storeId` no login, perfil ou JWT, o servidor do painel
+pode resolver a loja de contas `STORE_USER` por uma lista temporaria:
+
+```bash
+SF_MERCHANT_STORE_MAP='{"lojista@exemplo.ao":12,"id:345":27}'
+```
+
+As chaves aceitam o email do lojista ou `id:<userId>` e os valores sao os IDs das
+lojas. A variavel e exclusiva do servidor e nao deve usar o prefixo `NEXT_PUBLIC_`.
+Dados reais recebidos da API/JWT tem prioridade sobre esta lista. Depois de alterar
+a configuracao, o lojista deve iniciar uma nova sessao.
+
 ## Estrutura
 
-- `/login`: autenticacao exclusiva de administradores por `/api/auth/admin/login`.
+- `/login`: autenticacao de administradores, gestores e lojistas, com encaminhamento
+  por perfil de acesso.
 - `/dashboard`: indicadores de lojas, imagens, clientes e utilizadores internos.
 - `/dashboard/lojas`: catalogo dinamico com pesquisa e filtros, criacao, edicao,
   troca independente de imagem/logotipo, ativacao e desativacao.

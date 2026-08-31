@@ -12,6 +12,7 @@ import {
 import type { AuthRole } from '@/lib/admin-session';
 import type { LoginEmailRequest, LoginResponse } from '@/lib/api';
 import { getApiBaseUrl } from '@/lib/env';
+import { getTemporaryMerchantStoreId } from '@/lib/server-merchant-store-map';
 
 const REQUEST_TIMEOUT_MS = 12_000;
 
@@ -99,8 +100,11 @@ export async function resolveAdminSession(
     throw new BackendApiError('A conta nao tem acesso ao painel de gestao.', 403, profile);
   }
 
+  const email = profile.email ?? login.email ?? fallbackEmail;
+  const id = profile.id ?? login.id;
   const storeId = toPositiveInteger(profile.storeId) ??
     getTokenStoreId(token) ??
+    (role === 'STORE_USER' ? getTemporaryMerchantStoreId({ email, id }) : undefined) ??
     toPositiveInteger(login.storeId);
 
   if (role === 'STORE_USER' && !storeId) {
@@ -112,9 +116,9 @@ export async function resolveAdminSession(
   }
 
   return {
-    email: profile.email ?? login.email ?? fallbackEmail,
+    email,
     expiresAt: getTokenExpiresAt(token),
-    id: profile.id ?? login.id,
+    id,
     nome: profile.name ?? login.name,
     role,
     storeId,
