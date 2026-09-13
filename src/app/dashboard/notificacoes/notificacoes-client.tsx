@@ -1,426 +1,552 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Check, Search, Send } from 'lucide-react';
-
-import { useAdminSearchQuery } from '@/components/admin/useAdminSearchQuery';
-import { matchesSearchQuery } from '@/lib/admin-search';
-
+import { useEffect, useState, type FormEvent } from 'react';
 import {
-  ApiError,
+  Check,
+  Megaphone,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+} from 'lucide-react';
+import {
   listAllLojas,
+  clearAdminApiCache,
   listAllNotificacoes,
   marcarNotificacaoComoLida,
   type Loja,
   type Notificacao,
 } from '@/lib/api';
-
-import styles from './notificacoes.module.css';
-
-type ReadFilter = 'all' | 'unread';
-type Period = 'today' | '7d' | '30d' | 'custom';
-
-const periodOptions: Array<{ label: string; value: Period }> = [
-  { label: 'Hoje', value: 'today' },
-  { label: '7d', value: '7d' },
-  { label: '30d', value: '30d' },
-  { label: 'Personalizado', value: 'custom' },
-];
+import {
+  listAllResources,
+  listHighlights,
+  saveHighlight,
+  type Highlight,
+} from '@/lib/admin-resources';
+import { matchesSearchQuery } from '@/lib/admin-search';
+import { formatAdminDate, matchesDateRange } from '@/lib/admin-models';
+import {
+  Avatar,
+  EmptyState,
+  Modal,
+  Notice,
+  Unavailable,
+} from '@/components/admin/Workspace';
+import { Pagination } from '@/components/admin/Pagination';
+import { useAdminSearchQuery } from '@/components/admin/useAdminSearchQuery';
+import { CampaignWizard } from './campaign-wizard';
+import s from '@/components/admin/Workspace.module.css';
 
 export function NotificacoesClient() {
-  const [category, setCategory] = useState('');
-  const [composerMessage, setComposerMessage] = useState('');
-  const [composerNotice, setComposerNotice] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [lojas, setLojas] = useState<Loja[]>([]);
-  const [markingId, setMarkingId] = useState<number | null>(null);
-  const [notifications, setNotifications] = useState<Notificacao[]>([]);
-  const [period, setPeriod] = useState<Period>('7d');
-  const { deferredQuery, query, setQuery } = useAdminSearchQuery();
-  const [readFilter, setReadFilter] = useState<ReadFilter>('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sendToAllStores, setSendToAllStores] = useState(true);
-
-  async function loadNotifications() {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const result = await listAllNotificacoes();
-      setNotifications(result);
-    } catch (requestError) {
-      setError(getErrorMessage(requestError));
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
+  const [items, setItems] = useState<Notificacao[]>([]);
+  const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const [stores, setStores] = useState<Loja[]>([]);
+  const [error, setError] = useState('');
+  const [contentError, setContentError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [loadingContent, setLoadingContent] = useState(true);
+  const [version, setVersion] = useState(0);
+  const [tab, setTab] = useState('campaigns');
+  const [unread, setUnread] = useState(false);
+  const [period, setPeriod] = useState('30');
+  const [now, setNow] = useState(() => Date.now());
+  const [range, setRange] = useState({ from: '', to: '' });
+  const [page, setPage] = useState(0);
+  const [contentPage, setContentPage] = useState(0);
+  const [contentQuery, setContentQuery] = useState('');
+  const [marking, setMarking] = useState<number>();
+  const [wizard, setWizard] = useState(false);
+  const [editor, setEditor] = useState<Highlight | 'new' | null>(null);
+  const [message, setMessage] = useState('');
+  const { query, deferredQuery, setQuery } = useAdminSearchQuery();
   useEffect(() => {
-    let isActive = true;
-
-    void listAllNotificacoes()
-      .then((result) => {
-        if (isActive) {
-          setNotifications(result);
+    let active = true;
+    const timer = setInterval(() => setNow(Date.now()), 60000);
+    listAllNotificacoes()
+      .then((data) => {
+        if (active) {
+          setItems(data);
+          setError('');
         }
       })
-      .catch((requestError: unknown) => {
-        if (isActive) {
-          setError(getErrorMessage(requestError));
-        }
+      .catch((e: Error) => {
+        if (active) setError(e.message);
       })
       .finally(() => {
-        if (isActive) {
-          setIsLoading(false);
-        }
+        if (active) setLoading(false);
       });
-
-    void listAllLojas()
-      .then((items) => {
-        if (isActive) {
-          setLojas(items);
+    listAllResources(listHighlights)
+      .then((data) => {
+        if (active) {
+          setHighlights(data);
+          setContentError('');
         }
       })
-      .catch(() => {
-        if (isActive) {
-          setLojas([]);
-        }
+      .catch((e: Error) => {
+        if (active) setContentError(e.message);
+      })
+      .finally(() => {
+        if (active) setLoadingContent(false);
       });
-
+    listAllLojas()
+      .then((data) => {
+        if (active) setStores(data);
+      })
+      .catch(() => {});
     return () => {
-      isActive = false;
+      active = false;
+      clearInterval(timer);
     };
-  }, []);
-
-  const categories = useMemo(
-    () =>
-      [
-        ...new Set(
-          lojas
-            .map((loja) => loja.categoria)
-            .filter((value): value is string => Boolean(value)),
-        ),
-      ].sort((first, second) => first.localeCompare(second, 'pt')),
-    [lojas],
+  }, [version]);
+  const filtered = items.filter(
+    (n) =>
+      (!unread || !n.lida) &&
+      matchesSearchQuery(deferredQuery, [n.titulo, n.mensagem, n.tipo]) &&
+      (period === 'all' ||
+        (period === 'custom'
+          ? matchesDateRange(n.createdAt, range.from, range.to)
+          : !!n.createdAt &&
+            Date.parse(n.createdAt) >= now - Number(period) * 86400000)),
   );
-
-  const selectedStores = useMemo(() => {
-    return lojas.filter((loja) => {
-      const matchesSearch = matchesSearchQuery(searchTerm, [
-        loja.nome,
-        loja.razaoSocial,
-        loja.nif,
-        loja.categoria,
-        loja.piso,
-        loja.email,
-        loja.telefone,
-        loja.estado,
-      ]);
-      const matchesCategory = !category || loja.categoria === category;
-
-      return matchesSearch && matchesCategory;
-    });
-  }, [category, lojas, searchTerm]);
-
-  const visibleNotifications = useMemo(
-    () =>
-      notifications.filter((notification) => {
-        const matchesReadFilter = readFilter === 'all' || !notification.lida;
-        const matchesQuery = matchesSearchQuery(deferredQuery, [
-          notification.id,
-          notification.titulo,
-          notification.mensagem,
-          notification.tipo,
-          notification.createdAt,
-          notification.lida ? 'lida' : 'nao lida',
-        ]);
-
-        return (
-          matchesReadFilter &&
-          matchesPeriod(notification.createdAt, period) &&
-          matchesQuery
-        );
-      }),
-    [deferredQuery, notifications, period, readFilter],
+  const content = highlights.filter((h) =>
+    matchesSearchQuery(contentQuery, [
+      h.title,
+      h.bodyText,
+      h.storeName,
+      h.status,
+    ]),
   );
-
-  async function handleMarkAsRead(notification: Notificacao) {
-    if (notification.lida || !notification.id) {
-      return;
-    }
-
-    setMarkingId(notification.id);
-    setError(null);
-
+  const pages = Math.max(1, Math.ceil(filtered.length / 8));
+  const contentPages = Math.max(1, Math.ceil(content.length / 10));
+  const current = Math.min(page, pages - 1);
+  const currentContent = Math.min(contentPage, contentPages - 1);
+  async function markRead(item: Notificacao) {
+    if (!item.id) return;
+    setMarking(item.id);
     try {
-      const updated = await marcarNotificacaoComoLida(notification.id);
-      setNotifications((current) =>
-        current.map((item) =>
-          item.id === notification.id ? { ...item, ...updated, lida: true } : item,
-        ),
+      await marcarNotificacaoComoLida(item.id);
+      setItems((all) =>
+        all.map((n) => (n.id === item.id ? { ...n, lida: true } : n)),
       );
-    } catch (requestError) {
-      setError(getErrorMessage(requestError));
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : 'Não foi possível marcar como lida.',
+      );
     } finally {
-      setMarkingId(null);
+      setMarking(undefined);
     }
   }
-
-  function handleSend(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!composerMessage.trim()) {
-      setComposerNotice('Escreva a mensagem da notificação antes de continuar.');
-      return;
-    }
-
-    setComposerNotice(
-      'A API ainda não disponibiliza o envio administrativo de notificações. A seleção ficou pronta para esta integração.',
-    );
-  }
-
   return (
-    <div className={styles.page}>
-      <header className={styles.heading}>
-        <div>
-          <h1>Notificações</h1>
-          <p>Acompanhe avisos do programa e prepare comunicações para as lojas.</p>
-        </div>
-
-        <div className={styles.adminIdentity} aria-label="Sessão administrativa">
-          <span>Admin</span>
-          <i aria-hidden>A</i>
+    <div className={s.page}>
+      <header className={s.heading}>
+        <h1>Notificações e campanhas</h1>
+        <div className={s.actions}>
+          <button className={s.secondary} onClick={() => setEditor('new')}>
+            <Plus size={16} />
+            Criar destaque
+          </button>
+          <button className={s.button} onClick={() => setWizard(true)}>
+            <Megaphone size={16} />
+            Criar campanha push
+          </button>
         </div>
       </header>
-
-      <div className={styles.toolbar}>
-        <div aria-label="Estado das notificações" className={styles.filterTabs} role="group">
-          <button
-            aria-pressed={readFilter === 'all'}
-            className={readFilter === 'all' ? styles.filterActive : styles.filterTab}
-            onClick={() => setReadFilter('all')}
-            type="button"
-          >
-            Todas
-          </button>
-          <button
-            aria-pressed={readFilter === 'unread'}
-            className={readFilter === 'unread' ? styles.filterActive : styles.filterTab}
-            onClick={() => setReadFilter('unread')}
-            type="button"
-          >
-            Não lidas
-          </button>
-        </div>
-
-        <div aria-label="Período das notificações" className={styles.periodTabs} role="group">
-          {periodOptions.map((option) => (
-            <button
-              aria-pressed={period === option.value}
-              className={period === option.value ? styles.periodActive : styles.periodTab}
-              key={option.value}
-              onClick={() => setPeriod(option.value)}
-              type="button"
+      {error && <Notice tone="error">{error}</Notice>}
+      {message && <Notice tone="success">{message}</Notice>}
+      <div className={s.split}>
+        <section className={s.stack} aria-label="Notificações recebidas">
+          <div className={s.toolbar}>
+            <div className={s.segments}>
+              <button
+                className={s.segment}
+                aria-pressed={!unread}
+                onClick={() => {
+                  setUnread(false);
+                  setPage(0);
+                }}
+              >
+                Todas
+              </button>
+              <button
+                className={s.segment}
+                aria-pressed={unread}
+                onClick={() => {
+                  setUnread(true);
+                  setPage(0);
+                }}
+              >
+                Não lidas
+              </button>
+              <button
+                className={s.segment}
+                disabled
+                title="A API não identifica o público destinatário"
+              >
+                Lojas
+              </button>
+              <button
+                className={s.segment}
+                disabled
+                title="A API não identifica o público destinatário"
+              >
+                Utilizadores
+              </button>
+            </div>
+            <select
+              className={s.select}
+              aria-label="Período das notificações"
+              value={period}
+              onChange={(e) => {
+                setPeriod(e.target.value);
+                setPage(0);
+              }}
             >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {error ? (
-        <p className={styles.errorNotice} role="alert">
-          {error}
-        </p>
-      ) : null}
-
-      <div className={styles.contentGrid}>
-        <section aria-label="Lista de notificações" className={styles.notificationCard}>
-          <div className={styles.listHeader}>
-            <span className={styles.listTitle}>
-              {readFilter === 'unread' ? 'Não lidas' : 'Todas as notificações'}
-              <small>{visibleNotifications.length}</small>
-            </span>
-            <label className={styles.listSearch}>
-              <Search aria-hidden size={14} strokeWidth={1.7} />
+              <option value="all">Todo o período</option>
+              <option value="1">Últimas 24 horas</option>
+              <option value="7">7 dias</option>
+              <option value="30">30 dias</option>
+              <option value="custom">Personalizado</option>
+            </select>
+          </div>
+          {period === 'custom' && (
+            <div className={`${s.form} ${s.detailGrid}`}>
+              <label>
+                De
+                <input
+                  type="date"
+                  value={range.from}
+                  max={range.to || undefined}
+                  onChange={(e) => {
+                    setRange({ ...range, from: e.target.value });
+                    setPage(0);
+                  }}
+                />
+              </label>
+              <label>
+                Até
+                <input
+                  type="date"
+                  value={range.to}
+                  min={range.from || undefined}
+                  onChange={(e) => {
+                    setRange({ ...range, to: e.target.value });
+                    setPage(0);
+                  }}
+                />
+              </label>
+            </div>
+          )}
+          <div className={s.toolbar}>
+            <label className={s.search}>
+              <Search size={16} />
               <input
                 aria-label="Pesquisar notificações"
-                autoComplete="off"
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Titulo ou mensagem"
-                spellCheck={false}
-                type="search"
+                placeholder="Pesquisar notificações"
                 value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setPage(0);
+                }}
               />
             </label>
-            <button onClick={() => void loadNotifications()} type="button">
-              Atualizar
+            <button
+              className={s.iconButton}
+              title="Atualizar notificações"
+              aria-label="Atualizar notificações"
+              disabled={loading}
+              onClick={() => {
+                setLoading(true);
+                clearAdminApiCache();
+                setLoadingContent(true);
+                setVersion((v) => v + 1);
+              }}
+            >
+              <RefreshCw size={16} />
             </button>
           </div>
-
-          <div className={styles.notificationList}>
-            {isLoading ? (
-              <p className={styles.emptyState}>A carregar notificações...</p>
-            ) : visibleNotifications.length ? (
-              visibleNotifications.map((notification) => (
-                <article
-                  className={notification.lida ? styles.notificationRead : styles.notification}
-                  key={notification.id ?? `${notification.titulo}-${notification.createdAt}`}
-                >
-                  <span className={styles.notificationAvatar} aria-hidden />
-                  <div className={styles.notificationCopy}>
-                    <strong>{notification.titulo || 'Nova notificação'}</strong>
-                    <p>{notification.mensagem || 'Sem detalhe adicional.'}</p>
-                    <time dateTime={notification.createdAt}>
-                      {formatNotificationDate(notification.createdAt)}
+          <div className={s.panel} aria-busy={loading}>
+            {loading ? (
+              <EmptyState>A carregar notificações...</EmptyState>
+            ) : !filtered.length ? (
+              <EmptyState>Nenhuma notificação encontrada.</EmptyState>
+            ) : (
+              filtered.slice(current * 8, current * 8 + 8).map((n) => (
+                <article className={s.notification} key={n.id}>
+                  <Avatar name={n.titulo} />
+                  <div>
+                    <strong>{n.titulo || 'Notificação'}</strong>
+                    <p>{n.mensagem}</p>
+                    <time dateTime={n.createdAt}>
+                      {formatAdminDate(n.createdAt, true)}
                     </time>
                   </div>
-                  {notification.lida ? (
-                    <Check
-                      aria-label="Notificação lida"
-                      className={styles.readIcon}
-                      size={15}
-                      strokeWidth={2}
+                  {!n.lida ? (
+                    <button
+                      className={s.unread}
+                      title="Marcar como lida"
+                      aria-label={`Marcar como lida: ${n.titulo}`}
+                      disabled={marking === n.id}
+                      onClick={() => markRead(n)}
                     />
                   ) : (
-                    <button
-                      aria-label={`Marcar ${notification.titulo || 'notificação'} como lida`}
-                      className={styles.unreadButton}
-                      disabled={markingId === notification.id}
-                      onClick={() => void handleMarkAsRead(notification)}
-                      title="Marcar como lida"
-                      type="button"
-                    />
+                    <Check size={16} aria-label="Lida" />
                   )}
                 </article>
               ))
-            ) : (
-              <p
-                className={
-                  query.trim()
-                    ? `${styles.emptyState} ${styles.searchEmptyState}`
-                    : styles.emptyState
-                }
-              >
-                {query.trim()
-                  ? 'Nenhuma notificação corresponde à pesquisa.'
-                  : 'Não existem notificações neste período.'}
-              </p>
             )}
+            <Pagination
+              page={current}
+              totalPages={pages}
+              totalItems={filtered.length}
+              onPageChange={setPage}
+            />
           </div>
         </section>
-
-        <aside className={styles.composerCard}>
-          <div>
-            <h2>Envio de notificações</h2>
-            <p>para lojas</p>
-          </div>
-
-          <form className={styles.composerForm} onSubmit={handleSend}>
-            <label>
-              Pesquisar lojas
-              <input
-                autoComplete="off"
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Nome da loja"
-                spellCheck={false}
-                type="search"
-                value={searchTerm}
-              />
-            </label>
-
-            <div className={styles.targetControls}>
-              <label className={styles.checkboxLabel}>
-                <input
-                  checked={sendToAllStores}
-                  onChange={(event) => setSendToAllStores(event.target.checked)}
-                  type="checkbox"
-                />
-                Todas as lojas
-              </label>
-              <label className={styles.categoryLabel}>
-                Categoria
-                <select onChange={(event) => setCategory(event.target.value)} value={category}>
-                  <option value="">Todas</option>
-                  {categories.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </label>
+        <section className={s.panel} aria-label="Campanhas e destaques">
+          <div className={s.panelHeader}>
+            <div className={s.segments}>
+              <button
+                className={s.segment}
+                aria-pressed={tab === 'campaigns'}
+                onClick={() => setTab('campaigns')}
+              >
+                Campanhas
+              </button>
+              <button
+                className={s.segment}
+                aria-pressed={tab === 'highlights'}
+                onClick={() => setTab('highlights')}
+              >
+                Destaques
+              </button>
             </div>
-
-            <p className={styles.selectionSummary}>
-              {sendToAllStores
-                ? `${selectedStores.length} loja${selectedStores.length === 1 ? '' : 's'} selecionada${selectedStores.length === 1 ? '' : 's'}`
-                : 'Selecione as lojas após a integração de envio.'}
-            </p>
-
-            <label className={styles.messageField}>
-              Mensagem
-              <textarea
-                onChange={(event) => setComposerMessage(event.target.value)}
-                placeholder="Escreva alguma coisa"
-                value={composerMessage}
+          </div>
+          {tab === 'campaigns' ? (
+            <div className={`${s.padding} ${s.stack}`}>
+              <Unavailable>Consulta e gestão de campanhas push</Unavailable>
+              <EmptyState>
+                As campanhas ficarão disponíveis após a integração do serviço de
+                envio.
+              </EmptyState>
+            </div>
+          ) : (
+            <>
+              <div className={s.panelHeader}>
+                <label className={s.search}>
+                  <Search size={16} />
+                  <input
+                    aria-label="Pesquisar destaques"
+                    placeholder="Pesquisar destaques"
+                    value={contentQuery}
+                    onChange={(e) => {
+                      setContentQuery(e.target.value);
+                      setContentPage(0);
+                    }}
+                  />
+                </label>
+              </div>
+              {contentError && (
+                <div className={s.padding}>
+                  <Notice tone="error">{contentError}</Notice>
+                </div>
+              )}
+              {loadingContent ? (
+                <EmptyState>A carregar destaques...</EmptyState>
+              ) : !content.length ? (
+                <EmptyState>Nenhum destaque encontrado.</EmptyState>
+              ) : (
+                <div className={s.tableScroll}>
+                  <table className={s.table}>
+                    <thead>
+                      <tr>
+                        <th>Título</th>
+                        <th>Data</th>
+                        <th>Estado</th>
+                        <th>Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {content
+                        .slice(currentContent * 10, currentContent * 10 + 10)
+                        .map((h) => (
+                          <tr key={h.id}>
+                            <td>
+                              {h.title}
+                              <small className={s.muted}>
+                                {h.storeName ? ` · ${h.storeName}` : ''}
+                              </small>
+                            </td>
+                            <td>
+                              {formatAdminDate(h.publishedAt ?? h.createdAt)}
+                            </td>
+                            <td>
+                              <span className={s.badge}>
+                                {h.status || 'Indisponível'}
+                              </span>
+                            </td>
+                            <td>
+                              <button
+                                className={s.iconButton}
+                                title={`Editar ${h.title}`}
+                                aria-label={`Editar ${h.title}`}
+                                onClick={() => setEditor(h)}
+                              >
+                                <Pencil size={15} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <Pagination
+                page={currentContent}
+                totalPages={contentPages}
+                totalItems={content.length}
+                onPageChange={setContentPage}
               />
-            </label>
-
-            {composerNotice ? <p className={styles.composerNotice}>{composerNotice}</p> : null}
-
-            <button aria-label="Preparar envio da notificação" className={styles.sendButton} type="submit">
-              <Send aria-hidden fill="currentColor" size={18} strokeWidth={1.8} />
-            </button>
-          </form>
-        </aside>
+            </>
+          )}
+        </section>
       </div>
+      {wizard && (
+        <CampaignWizard stores={stores} onClose={() => setWizard(false)} />
+      )}
+      {editor && (
+        <HighlightEditor
+          highlight={editor === 'new' ? undefined : editor}
+          statuses={[
+            ...new Set(
+              highlights.map((h) => h.status).filter((v): v is string => !!v),
+            ),
+          ]}
+          stores={stores}
+          onClose={() => setEditor(null)}
+          onSaved={() => {
+            setEditor(null);
+            setTab('highlights');
+            setLoadingContent(true);
+            setVersion((v) => v + 1);
+            setMessage('Destaque guardado.');
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function matchesPeriod(createdAt: string | undefined, period: Period) {
-  if (period === 'custom' || !createdAt) {
-    return true;
+function HighlightEditor({
+  highlight,
+  statuses,
+  stores,
+  onClose,
+  onSaved,
+}: {
+  highlight?: Highlight;
+  statuses: string[];
+  stores: Loja[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState({
+    title: highlight?.title ?? '',
+    bodyText: highlight?.bodyText ?? '',
+    status: highlight?.status ?? '',
+    storeId: highlight?.storeId ? String(highlight.storeId) : '',
+  });
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      if (!form.title.trim()) throw new Error('Indique um título.');
+      await saveHighlight(
+        { ...form, title: form.title.trim(), storeId: Number(form.storeId) },
+        highlight?.id,
+      );
+      onSaved();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível guardar.');
+    } finally {
+      setBusy(false);
+    }
   }
-
-  const date = new Date(createdAt);
-  const now = new Date();
-
-  if (Number.isNaN(date.getTime())) {
-    return true;
-  }
-
-  if (period === 'today') {
-    return date.toDateString() === now.toDateString();
-  }
-
-  const days = period === '7d' ? 7 : 30;
-  return date.getTime() >= now.getTime() - days * 24 * 60 * 60 * 1000;
-}
-
-function formatNotificationDate(value: string | undefined) {
-  if (!value) {
-    return 'Agora';
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return 'Agora';
-  }
-
-  return new Intl.DateTimeFormat('pt-PT', {
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    month: 'short',
-  }).format(date);
-}
-
-function getErrorMessage(error: unknown) {
-  if (error instanceof ApiError) {
-    return error.message;
-  }
-
-  return 'Não foi possível carregar as notificações.';
+  return (
+    <Modal
+      title={highlight ? 'Editar destaque' : 'Criar destaque'}
+      busy={busy}
+      onClose={onClose}
+    >
+      <form className={s.form} onSubmit={submit}>
+        <label>
+          Título
+          <input
+            required
+            maxLength={200}
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+          />
+        </label>
+        <label>
+          Mensagem
+          <textarea
+            rows={4}
+            maxLength={10000}
+            value={form.bodyText}
+            onChange={(e) => setForm({ ...form, bodyText: e.target.value })}
+          />
+        </label>
+        <label>
+          Loja
+          <select
+            required
+            value={form.storeId}
+            onChange={(e) => setForm({ ...form, storeId: e.target.value })}
+          >
+            <option value="">Selecionar loja</option>
+            {stores.map((store) => (
+              <option key={store.id} value={store.id}>
+                {store.nome}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Estado
+          <input
+            required
+            list="content-statuses"
+            value={form.status}
+            onChange={(e) => setForm({ ...form, status: e.target.value })}
+          />
+          <datalist id="content-statuses">
+            {statuses.map((status) => (
+              <option key={status} value={status} />
+            ))}
+          </datalist>
+        </label>
+        <Notice>
+          Os estados aceites não estão enumerados no contrato. Confirme o valor
+          com a equipa responsável antes de publicar.
+        </Notice>
+        {error && <Notice tone="error">{error}</Notice>}
+        <div className={s.footer}>
+          <button
+            className={s.secondary}
+            type="button"
+            disabled={busy}
+            onClick={onClose}
+          >
+            Cancelar
+          </button>
+          <button className={s.button} disabled={busy}>
+            {busy ? 'A guardar...' : 'Guardar destaque'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
 }

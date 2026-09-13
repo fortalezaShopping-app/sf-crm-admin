@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { RecompensasClient } from './recompensas-client';
 
 export default function RecompensasPage() {
-  redirect('/dashboard');
+  return <RecompensasClient />;
 }

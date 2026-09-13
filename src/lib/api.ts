@@ -276,6 +276,8 @@ export type ListFaturasOptions = ListOptions & {
 };
 
 export type Profile = {
+  photoUrl?: string;
+  twoFactorEnabled?: boolean;
   createdAt?: string;
   email?: string;
   id?: number;

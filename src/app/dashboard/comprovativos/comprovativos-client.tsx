@@ -1,28 +1,17 @@
 'use client';
 
+import Image from 'next/image';
+import { useEffect, useRef, useState } from 'react';
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
-import {
-  CheckCircle2,
-  Clock3,
-  FileSearch,
+  Check,
+  ExternalLink,
   ImageOff,
-  ReceiptText,
   RefreshCw,
   RotateCw,
   Search,
-  ShieldCheck,
-  XCircle,
+  X,
+  ZoomIn,
 } from 'lucide-react';
-import Image from 'next/image';
-
-import { Pagination } from '@/components/admin/Pagination';
-import { useAdminSearchQuery } from '@/components/admin/useAdminSearchQuery';
-import { matchesSearchQuery } from '@/lib/admin-search';
 import {
   ApiError,
   clearAdminApiCache,
@@ -35,735 +24,641 @@ import {
   type FaturaAdmin,
   type OcrFatura,
   type ValidacaoFatura,
-  type ValidarFaturaRequest,
 } from '@/lib/api';
+import { matchesSearchQuery } from '@/lib/admin-search';
+import { formatAdminDate, formatNumber } from '@/lib/admin-models';
+import {
+  EmptyState,
+  ExportButton,
+  Modal,
+  Notice,
+} from '@/components/admin/Workspace';
+import { Pagination } from '@/components/admin/Pagination';
+import { useAdminSearchQuery } from '@/components/admin/useAdminSearchQuery';
+import s from '@/components/admin/Workspace.module.css';
+import styles from './invoice-workspace.module.css';
 
-import styles from './comprovativos.module.css';
-
-type StatusFilter = 'all' | 'APPROVED' | 'PENDING_VALIDATION' | 'REJECTED';
-
-const ITEMS_PER_PAGE = 10;
-
-const statusOptions: Array<{ label: string; value: StatusFilter }> = [
-  { label: 'Todas', value: 'all' },
-  { label: 'Pendentes', value: 'PENDING_VALIDATION' },
-  { label: 'Aprovadas', value: 'APPROVED' },
-  { label: 'Rejeitadas', value: 'REJECTED' },
-];
+const statusNames: Record<string, string> = {
+  APPROVED: 'Aprovada',
+  REJECTED: 'Rejeitada',
+  PENDING_VALIDATION: 'Pendente',
+  PENDING: 'Pendente',
+  PROCESSING: 'Em processamento',
+  UPLOADED: 'Submetida',
+};
+const money = (value?: number) =>
+  typeof value === 'number' ? `${formatNumber(value)} AOA` : 'Indisponível';
+const errorText = (error: unknown) =>
+  error instanceof Error
+    ? error.message
+    : 'Não foi possível concluir a operação.';
+async function optional<T>(request: Promise<T>) {
+  try {
+    return await request;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
+}
 
 export function ComprovativosClient() {
-  const [actionDecision, setActionDecision] =
-    useState<ValidarFaturaRequest['decision'] | null>(null);
-  const [detail, setDetail] = useState<FaturaAdmin | null>(null);
-  const [detailError, setDetailError] = useState<string | null>(null);
-  const [detailVersion, setDetailVersion] = useState(0);
   const [invoices, setInvoices] = useState<FaturaAdmin[]>([]);
-  const [isDetailLoading, setIsDetailLoading] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [listError, setListError] = useState<string | null>(null);
-  const [note, setNote] = useState('');
-  const [notice, setNotice] = useState<string | null>(null);
-  const [ocr, setOcr] = useState<OcrFatura | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [version, setVersion] = useState(0);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [filter, setFilter] = useState('all');
   const [page, setPage] = useState(0);
-  const { deferredQuery, query, setQuery } = useAdminSearchQuery();
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [id, setId] = useState<number>();
+  const [detail, setDetail] = useState<FaturaAdmin | null>(null);
+  const [ocr, setOcr] = useState<OcrFatura | null>(null);
   const [validation, setValidation] = useState<ValidacaoFatura | null>(null);
-
-  const loadInvoices = useCallback(
-    async (bypassCache = false) => {
-      setIsLoading(true);
-      setListError(null);
-
-      try {
-        if (bypassCache) {
-          clearAdminApiCache();
+  const [detailError, setDetailError] = useState('');
+  const [note, setNote] = useState('');
+  const [decision, setDecision] = useState<'APPROVED' | 'REJECTED' | null>(
+    null,
+  );
+  const [busy, setBusy] = useState(false);
+  const [decisionInvoiceId, setDecisionInvoiceId] = useState<number>();
+  const detailRef = useRef<HTMLDivElement>(null);
+  const [actionError, setActionError] = useState('');
+  const [zoom, setZoom] = useState(false);
+  const { query, deferredQuery, setQuery } = useAdminSearchQuery();
+  useEffect(() => {
+    let active = true;
+    listAllFaturas({ status: filter === 'all' ? undefined : filter })
+      .then((data) => {
+        if (active) {
+          setInvoices(data);
+          setError('');
         }
-
-        const result = await listAllFaturas({
-          status: statusFilter === 'all' ? undefined : statusFilter,
-        });
-
-        setInvoices(result);
-        setSelectedId((current) => {
-          const stillVisible = result.some((invoice) => invoice.id === current);
-          return stillVisible ? current : result[0]?.id ?? null;
-        });
-      } catch (error) {
-        setInvoices([]);
-        setSelectedId(null);
-        setListError(getErrorMessage(error, 'Não foi possível carregar as faturas.'));
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [statusFilter],
-  );
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => void loadInvoices(), 0);
-    return () => window.clearTimeout(timeoutId);
-  }, [loadInvoices]);
-
-  useEffect(() => {
-    let isActive = true;
-
-    if (!selectedId) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setIsDetailLoading(true);
-      setDetailError(null);
-      setNote('');
-
-      void Promise.all([
-        getFatura(selectedId),
-        getOptionalResource(getFaturaOcr(selectedId)),
-        getOptionalResource(getFaturaValidacao(selectedId)),
-      ])
-        .then(([invoice, ocrResult, validationResult]) => {
-          if (!isActive) {
-            return;
-          }
-
-          setDetail(invoice);
-          setOcr(ocrResult);
-          setValidation(validationResult);
-        })
-        .catch((error: unknown) => {
-          if (isActive) {
-            setDetailError(
-              getErrorMessage(error, 'Não foi possível carregar os detalhes da fatura.'),
-            );
-          }
-        })
-        .finally(() => {
-          if (isActive) {
-            setIsDetailLoading(false);
-          }
-        });
-    }, 0);
-
+      })
+      .catch((e) => {
+        if (active) {
+          setError(errorText(e));
+          setInvoices([]);
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
     return () => {
-      isActive = false;
-      window.clearTimeout(timeoutId);
+      active = false;
     };
-  }, [detailVersion, selectedId]);
-
-  const filteredInvoices = useMemo(
-    () =>
-      invoices.filter((invoice) =>
-        matchesSearchQuery(deferredQuery, [
-          invoice.id,
-          invoice.invoiceNumber,
-          invoice.storeId,
-          invoice.storeName,
-          invoice.issuerTaxId,
-          invoice.customerTaxId,
-          invoice.invoiceDate,
-          invoice.totalAmount,
-          invoice.status,
-          invoice.note,
-        ]),
-      ),
-    [deferredQuery, invoices],
+  }, [filter, version]);
+  const filtered = invoices.filter((i) =>
+    matchesSearchQuery(deferredQuery, [
+      i.id,
+      i.invoiceNumber,
+      i.storeName,
+      i.customerTaxId,
+      i.issuerTaxId,
+      i.totalAmount,
+      i.status,
+      i.note,
+      i.invoiceDate,
+    ]),
   );
-  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / ITEMS_PER_PAGE));
-  const visiblePage = Math.min(page, totalPages - 1);
-  const visibleInvoices = filteredInvoices.slice(
-    visiblePage * ITEMS_PER_PAGE,
-    (visiblePage + 1) * ITEMS_PER_PAGE,
-  );
-  const selectedInvoice = useMemo(() => {
-    if (!selectedId) {
-      return null;
-    }
-
-    const listedInvoice = filteredInvoices.find((invoice) => invoice.id === selectedId);
-
-    if (!listedInvoice) {
-      return null;
-    }
-
-    return detail?.id === selectedId
-      ? detail
-      : listedInvoice;
-  }, [detail, filteredInvoices, selectedId]);
-  const selectedOcr = detail?.id === selectedId ? ocr : null;
-  const selectedValidation = detail?.id === selectedId ? validation : null;
-
+  const pages = Math.max(1, Math.ceil(filtered.length / 8));
+  const current = Math.min(page, pages - 1);
+  const visible = filtered.slice(current * 8, current * 8 + 8);
+  const selected = filtered.find((i) => i.id === id) ?? visible[0];
+  const selectedId = selected?.id;
   useEffect(() => {
-    if (isLoading || filteredInvoices.some((invoice) => invoice.id === selectedId)) {
-      return;
-    }
-
-    const firstVisibleId = filteredInvoices[0]?.id ?? null;
-    const timeoutId = window.setTimeout(() => setSelectedId(firstVisibleId), 0);
-    return () => window.clearTimeout(timeoutId);
-  }, [filteredInvoices, isLoading, selectedId]);
-
-  function changeStatusFilter(nextStatus: StatusFilter) {
-    setNotice(null);
-    setStatusFilter(nextStatus);
-    setPage(0);
-    setSelectedId(null);
-    setDetail(null);
+    let active = true;
+    if (!selectedId) return;
+    Promise.all([
+      getFatura(selectedId),
+      optional(getFaturaOcr(selectedId)),
+      optional(getFaturaValidacao(selectedId)),
+    ])
+      .then(([invoice, ocrData, validationData]) => {
+        if (active) {
+          setDetail(invoice);
+          setOcr(ocrData);
+          setValidation(validationData);
+          setDetailError('');
+        }
+      })
+      .catch((e) => {
+        if (active) setDetailError(errorText(e));
+      });
+    return () => {
+      active = false;
+    };
+  }, [selectedId, version]);
+  const loaded = detail?.id === selectedId;
+  const invoice = loaded ? detail : selected;
+  const canValidate =
+    loaded &&
+    !detailError &&
+    !validation &&
+    ['PENDING_VALIDATION', 'PENDING'].includes(invoice?.status ?? '') &&
+    !loading;
+  function refresh() {
+    clearAdminApiCache();
+    setLoading(true);
+    setVersion((v) => v + 1);
   }
-
-  function selectInvoice(id: number | null) {
-    setNotice(null);
-    setSelectedId(id);
-  }
-
-  async function handleValidation(
-    decision: ValidarFaturaRequest['decision'],
-  ) {
-    if (!selectedInvoice?.id || actionDecision) {
+  async function confirmValidation() {
+    if (
+      !selectedId ||
+      selectedId !== decisionInvoiceId ||
+      !decision ||
+      !canValidate ||
+      busy
+    )
       return;
-    }
-
     if (decision === 'REJECTED' && !note.trim()) {
-      setNotice('Indique o motivo da rejeição antes de continuar.');
+      setActionError('Indique o motivo da rejeição.');
       return;
     }
-
-    setActionDecision(decision);
-    setNotice(null);
-
+    setBusy(true);
+    setActionError('');
     try {
-      const result = await validarFatura(String(selectedInvoice.id), {
+      await validarFatura(String(selectedId), {
         decision,
         note: note.trim() || undefined,
       });
-
-      setValidation(result);
-      setNotice(
-        decision === 'APPROVED'
-          ? 'Fatura aprovada com sucesso.'
-          : 'Fatura rejeitada com sucesso.',
+      setDecision(null);
+      setDetail(null);
+      setMessage(
+        decision === 'APPROVED' ? 'Fatura aprovada.' : 'Fatura rejeitada.',
       );
-      setDetailVersion((current) => current + 1);
-      await loadInvoices(true);
-    } catch (error) {
-      setNotice(getErrorMessage(error, 'Não foi possível validar a fatura.'));
+      setNote('');
+      refresh();
+    } catch (e) {
+      setActionError(errorText(e));
     } finally {
-      setActionDecision(null);
+      setBusy(false);
     }
   }
-
   return (
-    <div className={styles.page}>
-      <header className={styles.heading}>
-        <div className={styles.headingCopy}>
-          <h1>Talões</h1>
-          <p>Consulte a imagem e os dados OCR antes de atribuir os pontos.</p>
-        </div>
-
-        <button
-          className={styles.refreshButton}
-          disabled={isLoading}
-          onClick={() => void loadInvoices(true)}
-          type="button"
-        >
-          <RefreshCw aria-hidden size={16} strokeWidth={1.7} />
-          Atualizar
-        </button>
-      </header>
-
-      <div className={styles.toolbar}>
-        <div
-          aria-label="Filtrar faturas por estado"
-          className={styles.statusTabs}
-          role="group"
-        >
-          {statusOptions.map((option) => (
-            <button
-              aria-pressed={statusFilter === option.value}
-              className={
-                statusFilter === option.value
-                  ? styles.statusTabActive
-                  : styles.statusTab
-              }
-              key={option.value}
-              onClick={() => changeStatusFilter(option.value)}
-              type="button"
-            >
-              {option.value === 'PENDING_VALIDATION' ? (
-                <span className={styles.pendingDot} />
-              ) : null}
-              {option.label}
-            </button>
-          ))}
-        </div>
-
-        <label className={styles.invoiceSearch}>
-          <Search aria-hidden size={15} strokeWidth={1.7} />
-          <input
-            aria-label="Pesquisar faturas"
-            autoComplete="off"
-            onChange={(event) => {
-              setPage(0);
-              setQuery(event.target.value);
-            }}
-            placeholder="Loja, número, NIF ou valor"
-            spellCheck={false}
-            type="search"
-            value={query}
+    <div className={s.page}>
+      <header className={s.heading}>
+        <h1>Talões</h1>
+        <div className={s.actions}>
+          <ExportButton
+            name="taloes"
+            disabled={loading}
+            rows={[
+              ['Loja', 'Número', 'Estado', 'Data', 'Valor AOA', 'NIF cliente'],
+              ...filtered.map((i) => [
+                i.storeName,
+                i.invoiceNumber,
+                i.status,
+                i.invoiceDate,
+                i.totalAmount,
+                i.customerTaxId,
+              ]),
+            ]}
           />
-        </label>
-
-        <span className={styles.totalCount}>
-          {filteredInvoices.length} fatura{filteredInvoices.length === 1 ? '' : 's'}
-        </span>
-      </div>
-
-      {listError ? (
-        <p className={styles.errorNotice} role="alert">
-          {listError}
-        </p>
-      ) : null}
-
-      {notice ? (
-        <p
-          className={
-            notice.includes('sucesso') ? styles.successNotice : styles.actionError
-          }
-          role={notice.includes('sucesso') ? 'status' : 'alert'}
-        >
-          {notice}
-        </p>
-      ) : null}
-
+          <button
+            className={s.iconButton}
+            title="Atualizar talões"
+            aria-label="Atualizar talões"
+            disabled={loading || busy}
+            onClick={refresh}
+          >
+            <RefreshCw size={16} />
+          </button>
+        </div>
+      </header>
+      {error && <Notice tone="error">{error}</Notice>}
+      {message && <Notice tone="success">{message}</Notice>}
       <div className={styles.workspace}>
-        <section aria-label="Fila de faturas" className={styles.queueCard}>
-          <div className={styles.cardHeader}>
-            <div>
-              <h2>Fila de validação</h2>
-              <p>Selecione uma fatura para conferir os dados.</p>
-            </div>
-            <ReceiptText aria-hidden size={19} strokeWidth={1.7} />
-          </div>
-
-          <div className={styles.queueList}>
-            {isLoading ? (
-              <div className={styles.emptyState}>
-                <RefreshCw aria-hidden className={styles.spinning} size={22} />
-                <span>A carregar faturas...</span>
-              </div>
-            ) : visibleInvoices.length ? (
-              visibleInvoices.map((invoice) => (
+        <section
+          className={s.panel}
+          aria-label="Fila de faturas"
+          aria-busy={loading}
+        >
+          <div className={`${s.padding} ${s.stack}`}>
+            <div className={s.segments}>
+              {[
+                ['all', 'Todas'],
+                ['APPROVED', 'Aprovadas'],
+                ['PENDING_VALIDATION', 'Pendentes'],
+                ['REJECTED', 'Rejeitadas'],
+              ].map(([value, label]) => (
                 <button
-                  aria-pressed={selectedId === invoice.id}
-                  className={
-                    selectedId === invoice.id
-                      ? styles.queueItemActive
-                      : styles.queueItem
-                  }
-                  key={invoice.id ?? invoice.invoiceNumber}
-                  onClick={() => selectInvoice(invoice.id ?? null)}
-                  type="button"
+                  key={value}
+                  className={s.segment}
+                  aria-pressed={filter === value}
+                  disabled={busy}
+                  onClick={() => {
+                    setFilter(value);
+                    setLoading(true);
+                    setId(undefined);
+                    setDetail(null);
+                    setPage(0);
+                    setNote('');
+                  }}
                 >
-                  <span className={styles.receiptIcon}>
-                    <ReceiptText aria-hidden size={18} strokeWidth={1.6} />
-                  </span>
-                  <span className={styles.queueCopy}>
-                    <strong>{invoice.storeName || 'Loja não identificada'}</strong>
-                    <small>
-                      {invoice.invoiceNumber || `Fatura #${invoice.id ?? '-'}`}
-                      <span aria-hidden> · </span>
-                      {formatDate(invoice.invoiceDate)}
-                    </small>
-                    <b>{formatCurrency(invoice.totalAmount)}</b>
-                  </span>
-                  <StatusBadge status={invoice.status} />
+                  {label}
                 </button>
-              ))
-            ) : (
-              <div className={styles.emptyState}>
-                <FileSearch aria-hidden size={28} strokeWidth={1.5} />
-                <span>
-                  {query.trim()
-                    ? 'Nenhuma fatura corresponde à pesquisa.'
-                    : 'Não existem faturas neste estado.'}
-                </span>
-              </div>
-            )}
+              ))}
+            </div>
+            <label className={s.search}>
+              <Search size={16} />
+              <input
+                aria-label="Pesquisar faturas"
+                placeholder="Loja, número, NIF ou valor"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setPage(0);
+                }}
+              />
+            </label>
           </div>
-
+          {loading ? (
+            <EmptyState>A carregar faturas...</EmptyState>
+          ) : !filtered.length ? (
+            <EmptyState>Nenhuma fatura encontrada.</EmptyState>
+          ) : (
+            <div className={s.tableScroll}>
+              <table className={s.table}>
+                <thead>
+                  <tr>
+                    <th>Loja</th>
+                    <th>Estado</th>
+                    <th>Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visible.map((i) => (
+                    <tr
+                      key={i.id}
+                      className={i.id === selectedId ? s.selected : undefined}
+                    >
+                      <td>
+                        <button
+                          className={s.nameButton}
+                          aria-pressed={i.id === selectedId}
+                          disabled={busy}
+                          onClick={() => {
+                            setId(i.id);
+                            setNote('');
+                            setDetailError('');
+                            if (window.innerWidth < 760)
+                              detailRef.current?.scrollIntoView({
+                                block: 'start',
+                              });
+                          }}
+                        >
+                          <span>
+                            <strong>
+                              {i.storeName || 'Loja não identificada'}
+                            </strong>
+                            <small>{i.invoiceNumber || `#${i.id}`}</small>
+                            <small>{formatAdminDate(i.invoiceDate)}</small>
+                          </span>
+                        </button>
+                      </td>
+                      <td>
+                        <InvoiceStatus status={i.status} />
+                      </td>
+                      <td>{money(i.totalAmount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           <Pagination
-            isLoading={isLoading}
+            page={current}
+            totalPages={pages}
+            totalItems={filtered.length}
+            isLoading={loading || busy}
             onPageChange={setPage}
-            page={visiblePage}
-            totalItems={filteredInvoices.length}
-            totalPages={totalPages}
           />
         </section>
-
-        <section aria-label="Detalhes da fatura" className={styles.detailCard}>
-          {!selectedInvoice ? (
-            <div className={styles.detailEmpty}>
-              <FileSearch aria-hidden size={34} strokeWidth={1.4} />
-              <h2>Selecione uma fatura</h2>
-              <p>A imagem, o OCR e a decisão aparecem aqui.</p>
+        <div
+          className={s.stack}
+          ref={detailRef}
+          style={{ scrollMarginTop: 120 }}
+        >
+          <section className={s.panel}>
+            <header className={s.panelHeader}>
+              <h2>Informações do cliente</h2>
+            </header>
+            <div className={s.padding}>
+              {invoice ? (
+                <dl className={s.details}>
+                  <div>
+                    <dt>NIF do cliente</dt>
+                    <dd>{invoice.customerTaxId || 'Não disponibilizado'}</dd>
+                  </div>
+                </dl>
+              ) : (
+                <EmptyState>Selecione uma fatura.</EmptyState>
+              )}
             </div>
-          ) : (
-            <>
-              <div className={styles.cardHeader}>
-                <div>
-                  <h2>{selectedInvoice.storeName || 'Detalhes da fatura'}</h2>
-                  <p>
-                    {selectedInvoice.invoiceNumber ||
-                      `Fatura #${selectedInvoice.id ?? '-'}`}
-                  </p>
-                </div>
-                <StatusBadge status={selectedInvoice.status} />
-              </div>
-
-              {detailError ? (
-                <p className={styles.inlineError} role="alert">
-                  {detailError}
-                </p>
-              ) : null}
-
-              <div className={styles.detailContent}>
-                <InvoicePreview
-                  id={selectedInvoice.id}
-                  key={`${selectedInvoice.id}-${detailVersion}`}
-                  name={selectedInvoice.storeName}
-                  version={detailVersion}
-                />
-
-                <div className={styles.invoiceSummary}>
-                  {isDetailLoading ? (
-                    <p className={styles.loadingDetail}>A carregar detalhes...</p>
-                  ) : null}
-                  <dl className={styles.detailGrid}>
-                    <DetailItem
-                      label="Loja"
-                      value={selectedInvoice.storeName || '-'}
-                    />
-                    <DetailItem
-                      label="Data"
-                      value={formatDate(selectedInvoice.invoiceDate)}
-                    />
-                    <DetailItem
-                      label="Número da fatura"
-                      value={selectedInvoice.invoiceNumber || '-'}
-                    />
-                    <DetailItem
-                      label="Valor total"
-                      value={formatCurrency(selectedInvoice.totalAmount)}
-                    />
-                    <DetailItem
-                      label="NIF do emissor"
-                      value={selectedInvoice.issuerTaxId || '-'}
-                    />
-                    <DetailItem
-                      label="NIF do cliente"
-                      value={selectedInvoice.customerTaxId || '-'}
-                    />
+          </section>
+          <section className={s.panel} aria-label="Detalhes da fatura">
+            <header className={s.panelHeader}>
+              <h2>Dados da fatura</h2>
+            </header>
+            <div className={`${s.padding} ${s.stack}`}>
+              {detailError && <Notice tone="error">{detailError}</Notice>}
+              {!invoice ? (
+                <EmptyState>Selecione uma fatura.</EmptyState>
+              ) : (
+                <>
+                  <dl className={`${s.details} ${s.detailGrid}`}>
+                    {[
+                      ['Loja', invoice.storeName],
+                      ['Data', formatAdminDate(invoice.invoiceDate)],
+                      ['Número', invoice.invoiceNumber],
+                      ['NIF do emissor', invoice.issuerTaxId],
+                    ].map(([label, value]) => (
+                      <div key={label}>
+                        <dt>{label}</dt>
+                        <dd>{value || '-'}</dd>
+                      </div>
+                    ))}
                   </dl>
-                </div>
-              </div>
-
-              <section className={styles.dataSection}>
-                <div className={styles.sectionTitle}>
-                  <FileSearch aria-hidden size={18} strokeWidth={1.7} />
-                  <div>
-                    <h3>Leitura OCR</h3>
-                    <p>Dados reconhecidos a partir da imagem submetida.</p>
-                  </div>
-                  {typeof selectedOcr?.confidence === 'number' ? (
-                    <strong>{formatConfidence(selectedOcr.confidence)}</strong>
-                  ) : null}
-                </div>
-
-                {selectedOcr ? (
-                  <>
-                    <dl className={styles.ocrGrid}>
-                      <DetailItem
-                        label="Número reconhecido"
-                        value={selectedOcr.extractedInvoiceNumber || '-'}
-                      />
-                      <DetailItem
-                        label="NIF reconhecido"
-                        value={selectedOcr.extractedIssuerTaxId || '-'}
-                      />
-                      <DetailItem
-                        label="Data reconhecida"
-                        value={formatDate(selectedOcr.extractedInvoiceDate)}
-                      />
-                      <DetailItem
-                        label="Valor reconhecido"
-                        value={formatCurrency(selectedOcr.extractedTotalAmount)}
-                      />
+                  <InvoiceStatus status={invoice.status} />
+                  <strong className={styles.total}>
+                    {money(invoice.totalAmount)}
+                  </strong>
+                  {invoice.note && <p className={s.muted}>{invoice.note}</p>}
+                  {!loaded && !detailError && (
+                    <p className={s.muted}>A carregar detalhes...</p>
+                  )}
+                  {canValidate && (
+                    <>
+                      <label className={s.form}>
+                        Nota da validação
+                        <textarea
+                          aria-label="Nota da validação"
+                          rows={3}
+                          value={note}
+                          onChange={(e) => setNote(e.target.value)}
+                          placeholder="Motivo obrigatório em caso de rejeição"
+                        />
+                      </label>
+                      <div className={s.actions}>
+                        <button
+                          className={s.success}
+                          disabled={busy}
+                          onClick={() => {
+                            setActionError('');
+                            setDecision('APPROVED');
+                            setDecisionInvoiceId(selectedId);
+                          }}
+                        >
+                          <Check size={16} />
+                          Aprovar
+                        </button>
+                        <button
+                          className={s.danger}
+                          disabled={busy}
+                          onClick={() => {
+                            setActionError('');
+                            setDecision('REJECTED');
+                            setDecisionInvoiceId(selectedId);
+                          }}
+                        >
+                          <X size={16} />
+                          Rejeitar
+                        </button>
+                      </div>
+                    </>
+                  )}
+                  {loaded && validation && (
+                    <dl className={s.details}>
+                      <div>
+                        <dt>Decisão</dt>
+                        <dd>
+                          {statusNames[validation.decision ?? ''] ??
+                            validation.decision}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Validada em</dt>
+                        <dd>{formatAdminDate(validation.validatedAt, true)}</dd>
+                      </div>
+                      {validation.note && (
+                        <div>
+                          <dt>Nota</dt>
+                          <dd>{validation.note}</dd>
+                        </div>
+                      )}
                     </dl>
-                    {selectedOcr.extractedText ? (
-                      <details className={styles.ocrText}>
-                        <summary>Ver texto extraído</summary>
-                        <pre>{selectedOcr.extractedText}</pre>
-                      </details>
-                    ) : null}
-                  </>
-                ) : (
-                  <p className={styles.mutedMessage}>
-                    Esta fatura não possui resultado OCR disponível.
-                  </p>
-                )}
-              </section>
-
-              <section className={styles.validationSection}>
-                <div className={styles.sectionTitle}>
-                  <ShieldCheck aria-hidden size={18} strokeWidth={1.7} />
-                  <div>
-                    <h3>Validação</h3>
-                    <p>Confirme os dados antes de creditar ou rejeitar os pontos.</p>
-                  </div>
-                </div>
-
-                {selectedValidation ? (
-                  <div className={styles.validationResult}>
-                    {selectedValidation.decision === 'APPROVED' ? (
-                      <CheckCircle2 aria-hidden size={22} />
+                  )}
+                  <button
+                    className={s.secondary}
+                    disabled
+                    title="Pedido de informação à loja indisponível na API"
+                  >
+                    Solicitar informação à loja
+                  </button>
+                  <details>
+                    <summary>Dados OCR</summary>
+                    {loaded && ocr ? (
+                      <dl className={s.details}>
+                        <div>
+                          <dt>Número reconhecido</dt>
+                          <dd>{ocr.extractedInvoiceNumber || '-'}</dd>
+                        </div>
+                        <div>
+                          <dt>NIF do emissor</dt>
+                          <dd>{ocr.extractedIssuerTaxId || '-'}</dd>
+                        </div>
+                        <div>
+                          <dt>Data</dt>
+                          <dd>{formatAdminDate(ocr.extractedInvoiceDate)}</dd>
+                        </div>
+                        <div>
+                          <dt>Total reconhecido</dt>
+                          <dd>{money(ocr.extractedTotalAmount)}</dd>
+                        </div>
+                        {typeof ocr.confidence === 'number' && (
+                          <div>
+                            <dt>Confiança</dt>
+                            <dd>
+                              {formatNumber(
+                                ocr.confidence <= 1
+                                  ? ocr.confidence * 100
+                                  : ocr.confidence,
+                              )}
+                              %
+                            </dd>
+                          </div>
+                        )}
+                        {ocr.extractedText && (
+                          <div>
+                            <dt>Texto extraído</dt>
+                            <dd className={styles.ocr}>{ocr.extractedText}</dd>
+                          </div>
+                        )}
+                      </dl>
                     ) : (
-                      <XCircle aria-hidden size={22} />
+                      <p className={s.muted}>Leitura OCR indisponível.</p>
                     )}
-                    <div>
-                      <strong>{formatDecision(selectedValidation.decision)}</strong>
-                      <span>{formatDateTime(selectedValidation.validatedAt)}</span>
-                      {selectedValidation.note ? <p>{selectedValidation.note}</p> : null}
-                    </div>
-                  </div>
-                ) : (
-                  <div className={styles.validationForm}>
-                    <label>
-                      Nota da validação
-                      <textarea
-                        disabled={Boolean(actionDecision)}
-                        onChange={(event) => setNote(event.target.value)}
-                        placeholder="Obrigatória em caso de rejeição"
-                        rows={3}
-                        value={note}
-                      />
-                    </label>
-
-                    <div className={styles.validationActions}>
-                      <button
-                        className={styles.rejectButton}
-                        disabled={Boolean(actionDecision)}
-                        onClick={() => void handleValidation('REJECTED')}
-                        type="button"
-                      >
-                        <XCircle aria-hidden size={16} />
-                        {actionDecision === 'REJECTED'
-                          ? 'A rejeitar...'
-                          : 'Rejeitar'}
-                      </button>
-                      <button
-                        className={styles.approveButton}
-                        disabled={Boolean(actionDecision)}
-                        onClick={() => void handleValidation('APPROVED')}
-                        type="button"
-                      >
-                        <CheckCircle2 aria-hidden size={16} />
-                        {actionDecision === 'APPROVED'
-                          ? 'A aprovar...'
-                          : 'Aprovar fatura'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </section>
-            </>
+                  </details>
+                </>
+              )}
+            </div>
+          </section>
+        </div>
+        <section className={s.panel}>
+          <header className={s.panelHeader}>
+            <h2>Imagem da fatura</h2>
+            <button
+              className={s.iconButton}
+              title="Ampliar fatura"
+              aria-label="Ampliar fatura"
+              disabled={!selectedId}
+              onClick={() => setZoom(true)}
+            >
+              <ZoomIn size={16} />
+            </button>
+          </header>
+          {selectedId ? (
+            <InvoicePreview
+              key={`${selectedId}-${version}`}
+              id={selectedId}
+              version={version}
+              name={invoice?.storeName}
+            />
+          ) : (
+            <EmptyState>Sem fatura selecionada.</EmptyState>
           )}
         </section>
       </div>
-    </div>
-  );
-}
-
-function InvoicePreview({
-  id,
-  name,
-  version,
-}: {
-  id?: number;
-  name?: string;
-  version: number;
-}) {
-  const [hasError, setHasError] = useState(false);
-  const [rotation, setRotation] = useState(0);
-
-  return (
-    <div className={styles.invoicePreview}>
-      {id && !hasError ? (
-        <>
-          <Image
-            alt={`Imagem da fatura de ${name || `loja #${id}`}`}
-            fill
-            loading="eager"
-            onError={() => setHasError(true)}
-            sizes="(max-width: 760px) 90vw, 340px"
-            src={getFaturaImagePath(id, version)}
-            style={{ transform: `rotate(${rotation}deg)` }}
-            unoptimized
+      {zoom && selectedId && (
+        <Modal title="Imagem da fatura" onClose={() => setZoom(false)}>
+          <InvoicePreview
+            id={selectedId}
+            version={version}
+            name={invoice?.storeName}
+            large
           />
-          <button
-            aria-label="Rodar imagem 90 graus"
-            className={styles.rotateButton}
-            onClick={() => setRotation((current) => (current + 90) % 360)}
-            title="Rodar imagem"
-            type="button"
-          >
-            <RotateCw aria-hidden size={16} strokeWidth={1.8} />
-          </button>
-        </>
-      ) : (
-        <div className={styles.imageFallback}>
-          <ImageOff aria-hidden size={30} strokeWidth={1.4} />
-          <span>Imagem indisponível</span>
-        </div>
+        </Modal>
+      )}
+      {decision && (
+        <Modal
+          title={decision === 'APPROVED' ? 'Aprovar fatura' : 'Rejeitar fatura'}
+          busy={busy}
+          onClose={() => setDecision(null)}
+        >
+          <div className={s.stack}>
+            <p>
+              {invoice?.storeName} · {invoice?.invoiceNumber} ·{' '}
+              {money(invoice?.totalAmount)}
+            </p>
+            <p>Confirma esta decisão? A alteração será registada no sistema.</p>
+            {decision === 'REJECTED' && (
+              <label className={s.form}>
+                Motivo da rejeição
+                <textarea
+                  rows={3}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              </label>
+            )}
+            {actionError && <Notice tone="error">{actionError}</Notice>}
+            <div className={s.footer}>
+              <button
+                className={s.secondary}
+                disabled={busy}
+                onClick={() => setDecision(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                className={decision === 'APPROVED' ? s.success : s.danger}
+                disabled={
+                  busy || !canValidate || selectedId !== decisionInvoiceId
+                }
+                onClick={confirmValidation}
+              >
+                {busy ? 'A guardar...' : 'Confirmar decisão'}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
 }
 
-function DetailItem({ label, value }: { label: string; value: string }) {
+function InvoiceStatus({ status }: { status?: string }) {
   return (
-    <div>
-      <dt>{label}</dt>
-      <dd>{value}</dd>
-    </div>
-  );
-}
-
-function StatusBadge({ status }: { status?: string }) {
-  const kind = getStatusKind(status);
-  const Icon =
-    kind === 'approved'
-      ? CheckCircle2
-      : kind === 'rejected'
-        ? XCircle
-        : Clock3;
-
-  return (
-    <span className={styles[`status_${kind}`]}>
-      <Icon aria-hidden size={13} strokeWidth={2} />
-      {formatStatus(status)}
+    <span
+      className={s.badge}
+      data-tone={
+        status === 'APPROVED'
+          ? 'success'
+          : status === 'REJECTED'
+            ? 'danger'
+            : 'warning'
+      }
+    >
+      {statusNames[status ?? ''] ?? status ?? 'Indisponível'}
     </span>
   );
 }
-
-async function getOptionalResource<T>(request: Promise<T>) {
-  try {
-    return await request;
-  } catch (error) {
-    if (error instanceof ApiError && (error.status === 404 || error.status === 204)) {
-      return null;
-    }
-
-    throw error;
-  }
-}
-
-function getStatusKind(status?: string) {
-  const normalized = status?.toUpperCase();
-
-  if (normalized === 'APPROVED') {
-    return 'approved' as const;
-  }
-
-  if (normalized === 'REJECTED') {
-    return 'rejected' as const;
-  }
-
-  return 'pending' as const;
-}
-
-function formatStatus(status?: string) {
-  const normalized = status?.toUpperCase();
-
-  if (normalized === 'APPROVED') {
-    return 'Aprovada';
-  }
-
-  if (normalized === 'REJECTED') {
-    return 'Rejeitada';
-  }
-
-  if (normalized === 'PENDING_VALIDATION' || normalized === 'PENDING') {
-    return 'Pendente';
-  }
-
-  return status || 'Sem estado';
-}
-
-function formatDecision(value?: string) {
-  return value === 'APPROVED'
-    ? 'Fatura aprovada'
-    : value === 'REJECTED'
-      ? 'Fatura rejeitada'
-      : value || 'Validação concluída';
-}
-
-function formatCurrency(value?: number) {
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    return '-';
-  }
-
-  return new Intl.NumberFormat('pt-AO', {
-    currency: 'AOA',
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 2,
-    style: 'currency',
-  }).format(value);
-}
-
-function formatDate(value?: string) {
-  if (!value) {
-    return '-';
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat('pt-AO', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  }).format(date);
-}
-
-function formatDateTime(value?: string) {
-  if (!value) {
-    return 'Data não disponível';
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat('pt-AO', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date);
-}
-
-function formatConfidence(value: number) {
-  const normalized = value <= 1 ? value * 100 : value;
-  return `${Math.round(normalized)}% confiança`;
-}
-
-function getErrorMessage(error: unknown, fallback: string) {
-  if (error instanceof ApiError || error instanceof Error) {
-    return error.message;
-  }
-
-  return fallback;
+function InvoicePreview({
+  id,
+  name,
+  version,
+  large = false,
+}: {
+  id: number;
+  name?: string;
+  version: number;
+  large?: boolean;
+}) {
+  const [failed, setFailed] = useState(false);
+  const [rotation, setRotation] = useState(0);
+  return (
+    <div className={styles.preview} data-large={large}>
+      <div className={styles.image}>
+        {failed ? (
+          <div className={styles.fallback}>
+            <ImageOff size={28} />
+            <span>Imagem indisponível</span>
+          </div>
+        ) : (
+          <Image
+            fill
+            src={getFaturaImagePath(id, version)}
+            alt={`Fatura de ${name || 'loja'}`}
+            unoptimized
+            loading="eager"
+            sizes="(max-width: 760px) 90vw, 600px"
+            style={{
+              transform: `rotate(${rotation}deg)`,
+              scale: rotation % 180 ? '0.7' : '1',
+            }}
+            onError={() => setFailed(true)}
+          />
+        )}
+      </div>
+      <div className={s.actions}>
+        <button
+          className={s.iconButton}
+          title="Rodar imagem"
+          aria-label="Rodar imagem"
+          disabled={failed}
+          onClick={() => setRotation((r) => (r + 90) % 360)}
+        >
+          <RotateCw size={16} />
+        </button>
+        <a
+          className={s.secondary}
+          href={getFaturaImagePath(id, version)}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <ExternalLink size={16} />
+          Abrir original
+        </a>
+      </div>
+    </div>
+  );
 }

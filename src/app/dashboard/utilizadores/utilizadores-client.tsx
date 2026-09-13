@@ -1,620 +1,666 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { Ban, CircleCheck, Pencil, Plus, RefreshCcw, Save, Search, UserCog, X } from 'lucide-react';
-
-import { Pagination } from '@/components/admin/Pagination';
-import { useAdminSearchQuery } from '@/components/admin/useAdminSearchQuery';
-import { matchesSearchQuery } from '@/lib/admin-search';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
-  ApiError,
+  Ban,
+  Check,
+  History,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+} from 'lucide-react';
+import {
   activateUtilizador,
-  associateUtilizadorLoja,
   clearAdminApiCache,
+  associateUtilizadorLoja,
   createUtilizador,
   deactivateUtilizador,
   listAllLojas,
   listAllUtilizadores,
   updateUtilizador,
   type Loja,
-  type UserRole,
   type Utilizador,
+  type UserRole,
 } from '@/lib/api';
+import { matchesSearchQuery } from '@/lib/admin-search';
+import { formatAdminDate } from '@/lib/admin-models';
+import {
+  Avatar,
+  EmptyState,
+  ExportButton,
+  Modal,
+  Notice,
+  Unavailable,
+} from '@/components/admin/Workspace';
+import { Pagination } from '@/components/admin/Pagination';
+import { useAdminSearchQuery } from '@/components/admin/useAdminSearchQuery';
+import { useAdminSession } from '@/components/admin/AdminSessionContext';
+import s from '@/components/admin/Workspace.module.css';
 
-type InternalRole = Exclude<UserRole, 'CUSTOMER'>;
-type RoleFilter = UserRole | 'ALL';
-
-type FormState = {
-  cargo: string;
-  email: string;
-  lojaId: string;
-  nome: string;
-  password: string;
-  role: UserRole;
-  telefone: string;
+const roles: Record<UserRole, string> = {
+  ADMIN: 'Administrador',
+  MANAGER: 'Gestor',
+  STORE_USER: 'Lojista',
+  CUSTOMER: 'Cliente',
 };
-
-const internalRoleOptions: Array<{ label: string; value: InternalRole }> = [
-  { label: 'Administrador', value: 'ADMIN' },
-  { label: 'Gestor', value: 'MANAGER' },
-  { label: 'Utilizador de loja', value: 'STORE_USER' },
-];
-
-const roleFilterOptions: Array<{ label: string; value: RoleFilter }> = [
-  { label: 'Todos os utilizadores', value: 'ALL' },
-  { label: 'Clientes', value: 'CUSTOMER' },
-  ...internalRoleOptions,
-];
-
-const initialFormState: FormState = {
-  cargo: '',
-  email: '',
-  lojaId: '',
-  nome: '',
-  password: '',
-  role: 'ADMIN',
-  telefone: '',
-};
+const errorText = (error: unknown) =>
+  error instanceof Error
+    ? error.message
+    : 'Não foi possível concluir a operação.';
 
 export function UtilizadoresClient() {
-  const [actionId, setActionId] = useState<string | null>(null);
-  const [editingUser, setEditingUser] = useState<Utilizador | null>(null);
-  const [editingUserId, setEditingUserId] = useState<number | null>(null);
-  const [form, setForm] = useState<FormState>(initialFormState);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [lojas, setLojas] = useState<Loja[]>([]);
-  const [message, setMessage] = useState<string | null>(null);
+  const session = useAdminSession();
+  const [users, setUsers] = useState<Utilizador[]>([]);
+  const [stores, setStores] = useState<Loja[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [version, setVersion] = useState(0);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [role, setRole] = useState('ALL');
   const [page, setPage] = useState(0);
-  const { deferredQuery, query, setQuery } = useAdminSearchQuery();
-  const [selectedRole, setSelectedRole] = useState<RoleFilter>('ALL');
-  const [utilizadores, setUtilizadores] = useState<Utilizador[]>([]);
-
-  const loadUtilizadores = useCallback(
-    async (bypassCache = false) => {
-      setIsLoading(true);
-      setMessage(null);
-
-      try {
-        if (bypassCache) {
-          clearAdminApiCache();
+  const [selectedId, setSelectedId] = useState<number>();
+  const [tab, setTab] = useState('details');
+  const [editor, setEditor] = useState<Utilizador | 'new' | null>(null);
+  const [confirm, setConfirm] = useState<Utilizador | null>(null);
+  const [showLog, setShowLog] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const detail = useRef<HTMLElement>(null);
+  const { query, deferredQuery, setQuery } = useAdminSearchQuery();
+  useEffect(() => {
+    let active = true;
+    listAllUtilizadores()
+      .then((data) => {
+        if (active) {
+          setUsers(data);
+          setError('');
         }
-
-        const role = selectedRole === 'ALL' ? undefined : selectedRole;
-        const result = await listAllUtilizadores(role);
-        setUtilizadores(result);
-      } catch (error) {
-        setMessage(getErrorMessage(error));
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [selectedRole],
-  );
-
+      })
+      .catch((e) => {
+        if (active) setError(errorText(e));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [version]);
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => void loadUtilizadores(), 0);
-    return () => window.clearTimeout(timeoutId);
-  }, [loadUtilizadores]);
-
-  useEffect(() => {
+    let active = true;
     listAllLojas()
-      .then((result) =>
-        setLojas(
-          [...result].sort((left, right) =>
-            (left.nome ?? '').localeCompare(right.nome ?? '', 'pt', {
-              sensitivity: 'base',
-            }),
-          ),
-        ),
-      )
-      .catch(() => setLojas([]));
+      .then((data) => {
+        if (active) setStores(data);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, []);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setIsSubmitting(true);
-    setMessage(null);
-
+  const filtered = users.filter(
+    (u) =>
+      (role === 'ALL' || (u.roles ?? [u.role]).includes(role as UserRole)) &&
+      matchesSearchQuery(deferredQuery, [
+        u.nome,
+        u.email,
+        u.telefone,
+        u.id,
+        u.estado,
+        ...(u.roles ?? []).map((r) => roles[r]),
+      ]),
+  );
+  const pages = Math.max(1, Math.ceil(filtered.length / 10));
+  const currentPage = Math.min(page, pages - 1);
+  const visible = filtered.slice(currentPage * 10, currentPage * 10 + 10);
+  const selected = filtered.find((u) => u.id === selectedId) ?? visible[0];
+  function refresh() {
+    clearAdminApiCache();
+    setLoading(true);
+    setVersion((v) => v + 1);
+  }
+  async function changeStatus() {
+    if (!confirm?.id) return;
+    setBusy(true);
+    setActionError('');
     try {
-      if (editingUserId) {
-        await updateUtilizador(editingUserId, {
-          email: form.email,
-          nome: form.nome,
-          telefone: form.telefone || undefined,
-        });
-
-        if (form.lojaId) {
-          await associateUtilizadorLoja(editingUserId, Number(form.lojaId), form.cargo || undefined);
-        }
-      } else {
-        if (!isInternalRole(form.role)) {
-          throw new Error('Clientes devem criar a conta através da aplicação mobile.');
-        }
-
-        await createUtilizador({
-          cargo: form.cargo || undefined,
-          email: form.email,
-          lojaId: form.lojaId ? Number(form.lojaId) : undefined,
-          nome: form.nome,
-          password: form.password,
-          role: form.role,
-          telefone: form.telefone || undefined,
-        });
-      }
-
-      setMessage(
-        editingUserId ? 'Utilizador atualizado com sucesso.' : 'Utilizador criado com sucesso.',
+      const updated = await (confirm.estado === 'ATIVO'
+        ? deactivateUtilizador(confirm.id)
+        : activateUtilizador(confirm.id));
+      setUsers((all) =>
+        all.map((u) => (u.id === confirm.id ? { ...u, ...updated } : u)),
       );
-      resetForm();
-      setPage(0);
-      await loadUtilizadores(true);
-    } catch (error) {
-      setMessage(getErrorMessage(error));
+      setConfirm(null);
+      setMessage('Estado do utilizador atualizado.');
+    } catch (e) {
+      setActionError(errorText(e));
     } finally {
-      setIsSubmitting(false);
+      setBusy(false);
     }
   }
-
-  async function handleDeactivate(utilizador: Utilizador) {
-    if (
-      !utilizador.id ||
-      !window.confirm(`Desativar o utilizador ${utilizador.nome ?? utilizador.email ?? utilizador.id}?`)
-    ) {
-      return;
-    }
-
-    setActionId(`deactivate-${utilizador.id}`);
-    setMessage(null);
-
-    try {
-      await deactivateUtilizador(utilizador.id);
-      setMessage('Utilizador desativado com sucesso.');
-      await loadUtilizadores(true);
-    } catch (error) {
-      setMessage(getErrorMessage(error));
-    } finally {
-      setActionId(null);
-    }
-  }
-
-  async function handleActivate(utilizador: Utilizador) {
-    if (
-      !utilizador.id ||
-      !window.confirm(`Ativar o utilizador ${utilizador.nome ?? utilizador.email ?? utilizador.id}?`)
-    ) {
-      return;
-    }
-
-    setActionId(`activate-${utilizador.id}`);
-    setMessage(null);
-
-    try {
-      await activateUtilizador(utilizador.id);
-      setMessage('Utilizador ativado com sucesso.');
-      await loadUtilizadores(true);
-    } catch (error) {
-      setMessage(getErrorMessage(error));
-    } finally {
-      setActionId(null);
-    }
-  }
-
-  function startEditing(utilizador: Utilizador) {
-    if (!utilizador.id) {
-      return;
-    }
-
-    setEditingUserId(utilizador.id);
-    setEditingUser(utilizador);
-    setForm({
-      cargo: '',
-      email: utilizador.email ?? '',
-      lojaId: '',
-      nome: utilizador.nome ?? '',
-      password: '',
-      role: utilizador.role ?? 'CUSTOMER',
-      telefone: utilizador.telefone ?? '',
-    });
-    setMessage(null);
-  }
-
-  function resetForm() {
-    setEditingUserId(null);
-    setEditingUser(null);
-    setForm({ ...initialFormState, role: getCreationRole(selectedRole) });
-  }
-
-  function handleRoleFilter(role: RoleFilter) {
-    setSelectedRole(role);
-    setPage(0);
-    setEditingUserId(null);
-    setEditingUser(null);
-    setForm({ ...initialFormState, role: getCreationRole(role) });
-  }
-
-  const filteredUtilizadores = useMemo(
-    () =>
-      utilizadores.filter((utilizador) =>
-        matchesSearchQuery(deferredQuery, [
-          utilizador.id,
-          utilizador.nome,
-          utilizador.email,
-          utilizador.telefone,
-          utilizador.role,
-          utilizador.roles,
-          utilizador.estado,
-        ]),
-      ),
-    [deferredQuery, utilizadores],
-  );
-  const totalPages = Math.max(1, Math.ceil(filteredUtilizadores.length / 10));
-  const visiblePage = Math.min(page, totalPages - 1);
-  const visibleUtilizadores = filteredUtilizadores.slice(
-    visiblePage * 10,
-    (visiblePage + 1) * 10,
-  );
-
   return (
-    <div className="dashboard-content">
-      <section className="dashboard-heading">
-        <div className="heading-copy">
-          <p className="eyebrow">Gestão de contas</p>
-          <h1>Utilizadores</h1>
-          <p>Consulte clientes e contas internas, atualize dados e controle o acesso ao sistema.</p>
-        </div>
-
-        <div className="topbar-actions">
-          <label className="store-search admin-list-search">
-            <Search aria-hidden size={15} strokeWidth={1.7} />
-            <input
-              aria-label="Pesquisar utilizadores"
-              autoComplete="off"
-              onChange={(event) => {
-                setPage(0);
-                setQuery(event.target.value);
-              }}
-              placeholder="Nome, email ou telefone"
-              spellCheck={false}
-              type="search"
-              value={query}
-            />
-          </label>
-          <select
-            aria-label="Filtrar por role"
-            className="table-select"
-            onChange={(event) => handleRoleFilter(event.target.value as RoleFilter)}
-            value={selectedRole}
-          >
-            {roleFilterOptions.map((role) => (
-              <option key={role.value} value={role.value}>
-                {role.label}
-              </option>
-            ))}
-          </select>
-          <button
-            className="ghost-button"
-            onClick={() => void loadUtilizadores(true)}
-            type="button"
-          >
-            <RefreshCcw aria-hidden size={16} />
-            Atualizar
+    <div className={s.page}>
+      <header className={s.heading}>
+        <h1>Gestão de utilizadores</h1>
+        <div className={s.actions}>
+          <ExportButton
+            name="utilizadores"
+            disabled={loading}
+            rows={[
+              ['Nome', 'Email', 'Telefone', 'Estado', 'Função'],
+              ...filtered.map((u) => [
+                u.nome,
+                u.email,
+                u.telefone,
+                u.estado,
+                (u.roles ?? [u.role])
+                  .filter(Boolean)
+                  .map((r) => roles[r!])
+                  .join(', '),
+              ]),
+            ]}
+          />
+          <button className={s.button} onClick={() => setEditor('new')}>
+            <Plus size={16} />
+            Novo utilizador
           </button>
         </div>
-      </section>
-
-      {message ? <p className={getMessageClassName(message)}>{message}</p> : null}
-
-      <section className="management-grid">
-        <article className="panel">
-          <div className="panel-header">
-            <div>
-              <h2>{roleFilterOptions.find((role) => role.value === selectedRole)?.label}</h2>
-              <p className="panel-subtitle">Contas registadas na API do Shopping Fortaleza</p>
-            </div>
-            <span className="count-pill">{filteredUtilizadores.length}</span>
-          </div>
-
-          <div className="table-scroll">
-            <table className="admin-table users-table">
-              <thead>
-                <tr>
-                  <th>Nome</th>
-                  <th>Role</th>
-                  <th>Estado</th>
-                  <th>Acoes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleUtilizadores.length > 0 ? (
-                  visibleUtilizadores.map((utilizador) => (
-                    <tr key={utilizador.id ?? utilizador.email}>
-                      <td>
-                        <span className="user-cell">
-                          <span className="user-avatar" aria-hidden>
-                            {getInitials(utilizador.nome, utilizador.email)}
-                          </span>
-                          <span className="table-title">
-                            <strong>{utilizador.nome ?? 'Sem nome'}</strong>
-                            <span>{utilizador.email ?? 'Sem email'}</span>
-                          </span>
-                        </span>
-                      </td>
-                      <td>{formatRoles(utilizador.roles, utilizador.role)}</td>
-                      <td>
-                        <span
-                          className={
-                            utilizador.estado === 'ATIVO'
-                              ? 'badge badge--success'
-                              : 'badge badge--warning'
-                          }
-                        >
-                          {utilizador.estado ?? 'Sem estado'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="table-actions">
-                          <button
-                            className="table-action"
-                            disabled={!utilizador.id}
-                            onClick={() => startEditing(utilizador)}
-                            type="button"
-                          >
-                            <Pencil aria-hidden size={14} />
-                            Editar
-                          </button>
-                          {utilizador.estado === 'ATIVO' ? (
-                            <button
-                              className="table-action table-action--danger"
-                              disabled={!utilizador.id || actionId === `deactivate-${utilizador.id}`}
-                              onClick={() => void handleDeactivate(utilizador)}
-                              type="button"
-                            >
-                              <Ban aria-hidden size={14} />
-                              Desativar
-                            </button>
-                          ) : (
-                            <button
-                              className="table-action"
-                              disabled={!utilizador.id || actionId === `activate-${utilizador.id}`}
-                              onClick={() => void handleActivate(utilizador)}
-                              type="button"
-                            >
-                              <CircleCheck aria-hidden size={14} />
-                              Ativar
-                            </button>
-                          )}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={4}>
-                      {isLoading
-                        ? 'A carregar...'
-                        : query.trim()
-                          ? 'Nenhum utilizador corresponde à pesquisa.'
-                          : 'Sem utilizadores nesta categoria.'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <Pagination
-            isLoading={isLoading}
-            onPageChange={setPage}
-            page={visiblePage}
-            totalItems={filteredUtilizadores.length}
-            totalPages={totalPages}
-          />
-        </article>
-
-        <article className="panel">
-          <div className="panel-header">
-            <h2>{editingUserId ? 'Editar utilizador' : 'Novo utilizador'}</h2>
-            <UserCog aria-hidden size={18} />
-          </div>
-
-          {editingUser ? (
-            <div className="user-account-details">
-              <dl className="detail-list">
-                <div>
-                  <dt>ID da conta</dt>
-                  <dd>#{editingUser.id}</dd>
-                </div>
-                <div>
-                  <dt>Tipo de conta</dt>
-                  <dd>{formatRoles(editingUser.roles, editingUser.role)}</dd>
-                </div>
-                <div>
-                  <dt>Autenticação em dois passos</dt>
-                  <dd>{editingUser.twoFactorEnabled ? 'Ativa' : 'Inativa'}</dd>
-                </div>
-                <div>
-                  <dt>Foto de perfil</dt>
-                  <dd>{editingUser.photoUrl ? 'Configurada' : 'Não configurada'}</dd>
-                </div>
-                <div>
-                  <dt>Último acesso</dt>
-                  <dd>{formatDate(editingUser.ultimoLogin)}</dd>
-                </div>
-                <div>
-                  <dt>Conta criada</dt>
-                  <dd>{formatDate(editingUser.createdAt)}</dd>
-                </div>
-                <div>
-                  <dt>Última atualização</dt>
-                  <dd>{formatDate(editingUser.updatedAt)}</dd>
-                </div>
-              </dl>
-            </div>
-          ) : null}
-
-          <form className="admin-form" onSubmit={handleSubmit}>
-            <label>
-              Nome
+      </header>
+      {error && <Notice tone="error">{error}</Notice>}
+      {message && <Notice tone="success">{message}</Notice>}
+      <div className={s.split}>
+        <section
+          className={s.panel}
+          aria-label="Lista de utilizadores"
+          aria-busy={loading}
+        >
+          <div className={s.panelHeader}>
+            <label className={s.search}>
+              <Search size={17} />
               <input
-                onChange={(event) => setForm({ ...form, nome: event.target.value })}
-                required
-                value={form.nome}
+                aria-label="Pesquisar utilizadores"
+                placeholder="Pesquisar utilizadores"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setPage(0);
+                }}
               />
             </label>
-            <label>
-              Email
-              <input
-                onChange={(event) => setForm({ ...form, email: event.target.value })}
-                required
-                type="email"
-                value={form.email}
-              />
-            </label>
-            <label>
-              Telefone
-              <input
-                onChange={(event) => setForm({ ...form, telefone: event.target.value })}
-                value={form.telefone}
-              />
-            </label>
-            <label>
-              Role
-              <select
-                disabled={Boolean(editingUserId)}
-                onChange={(event) =>
-                  setForm({ ...form, role: event.target.value as UserRole })
-                }
-                value={form.role}
-              >
-                {(editingUserId ? roleFilterOptions.filter((role) => role.value !== 'ALL') : internalRoleOptions).map((role) => (
-                  <option key={role.value} value={role.value}>
-                    {role.label}
-                  </option>
-                ))}
-              </select>
-              {editingUserId ? (
-                <span className="form-hint">O papel da conta não pode ser alterado pela API atual.</span>
-              ) : null}
-            </label>
-
-            {form.role === 'STORE_USER' ? (
-              <>
-                <label>
-                  Loja
-                  <select
-                    onChange={(event) => setForm({ ...form, lojaId: event.target.value })}
-                    required={!editingUserId}
-                    value={form.lojaId}
-                  >
-                    <option value="">
-                      {editingUserId ? 'Manter associação atual' : 'Selecione uma loja'}
-                    </option>
-                    {lojas.map((loja) => (
-                      <option key={loja.id} value={loja.id}>
-                        {loja.nome}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Cargo
-                  <input
-                    onChange={(event) => setForm({ ...form, cargo: event.target.value })}
-                    value={form.cargo}
-                  />
-                </label>
-              </>
-            ) : null}
-
-            {editingUserId ? null : (
-              <label>
-                Senha
-                <input
-                  minLength={8}
-                  onChange={(event) => setForm({ ...form, password: event.target.value })}
-                  required
-                  type="password"
-                  value={form.password}
-                />
-              </label>
-            )}
-
-            <button className="primary-button" disabled={isSubmitting} type="submit">
-              {editingUserId ? <Save aria-hidden size={16} /> : <Plus aria-hidden size={16} />}
-              {isSubmitting
-                ? 'A guardar...'
-                : editingUserId
-                  ? 'Guardar alterações'
-                  : 'Criar utilizador'}
+            <select
+              className={s.select}
+              aria-label="Filtrar por função"
+              value={role}
+              onChange={(e) => {
+                setRole(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="ALL">Todas as funções</option>
+              {Object.entries(roles).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <button
+              className={s.iconButton}
+              title="Atualizar utilizadores"
+              aria-label="Atualizar utilizadores"
+              disabled={loading}
+              onClick={refresh}
+            >
+              <RefreshCw size={16} />
             </button>
-
-            {editingUserId ? (
-              <button className="ghost-button" onClick={resetForm} type="button">
-                <X aria-hidden size={16} />
-                Cancelar edicao
+          </div>
+          {loading ? (
+            <EmptyState>A carregar utilizadores...</EmptyState>
+          ) : !filtered.length ? (
+            <EmptyState>Nenhum utilizador encontrado.</EmptyState>
+          ) : (
+            <div className={s.tableScroll}>
+              <table className={s.table}>
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Telefone</th>
+                    <th>Estado</th>
+                    <th>Pontos</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visible.map((u) => (
+                    <tr
+                      key={u.id}
+                      className={selected?.id === u.id ? s.selected : undefined}
+                    >
+                      <td>
+                        <button
+                          className={s.nameButton}
+                          aria-pressed={selected?.id === u.id}
+                          onClick={() => {
+                            setSelectedId(u.id);
+                            setTab('details');
+                            if (window.innerWidth < 760)
+                              detail.current?.scrollIntoView({
+                                block: 'start',
+                              });
+                          }}
+                        >
+                          <Avatar name={u.nome} src={u.photoUrl} />
+                          <span>
+                            <strong>{u.nome || 'Sem nome'}</strong>
+                            <small>{u.email}</small>
+                          </span>
+                        </button>
+                      </td>
+                      <td>{u.telefone || '-'}</td>
+                      <td>
+                        <UserStatus user={u} />
+                      </td>
+                      <td title="Saldo não disponibilizado pela API">-</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <Pagination
+            page={currentPage}
+            totalPages={pages}
+            totalItems={filtered.length}
+            onPageChange={setPage}
+            isLoading={loading}
+          />
+        </section>
+        <aside
+          ref={detail}
+          className={s.panel}
+          aria-label="Detalhes do utilizador"
+        >
+          {!selected || loading ? (
+            <EmptyState>Selecione um utilizador.</EmptyState>
+          ) : (
+            <>
+              <div className={s.identity}>
+                <Avatar large name={selected.nome} src={selected.photoUrl} />
+                <h2>{selected.nome || 'Sem nome'}</h2>
+                <p>Membro desde {formatAdminDate(selected.createdAt)}</p>
+                <span className={s.badge}>
+                  {(selected.roles ?? [selected.role])
+                    .filter(Boolean)
+                    .map((r) => roles[r!])
+                    .join(', ') || 'Função não disponível'}
+                </span>
+              </div>
+              <div className={`${s.padding} ${s.stack}`}>
+                <div className={s.segments}>
+                  <button
+                    className={s.segment}
+                    aria-pressed={tab === 'details'}
+                    onClick={() => setTab('details')}
+                  >
+                    Detalhes
+                  </button>
+                  <button
+                    className={s.segment}
+                    aria-pressed={tab === 'history'}
+                    onClick={() => setTab('history')}
+                  >
+                    Histórico
+                  </button>
+                </div>
+                {tab === 'details' ? (
+                  <dl className={s.details}>
+                    <div>
+                      <dt>Email</dt>
+                      <dd>{selected.email || '-'}</dd>
+                    </div>
+                    <div>
+                      <dt>Telefone</dt>
+                      <dd>{selected.telefone || '-'}</dd>
+                    </div>
+                    <div>
+                      <dt>Último acesso</dt>
+                      <dd>{formatAdminDate(selected.ultimoLogin, true)}</dd>
+                    </div>
+                    <div>
+                      <dt>Estado</dt>
+                      <dd>
+                        <UserStatus user={selected} />
+                      </dd>
+                    </div>
+                  </dl>
+                ) : (
+                  <UserHistory user={selected} />
+                )}
+                <div className={s.actions}>
+                  <button
+                    className={s.secondary}
+                    onClick={() => setEditor(selected)}
+                  >
+                    <Pencil size={15} />
+                    Editar
+                  </button>
+                  <button
+                    className={s.iconButton}
+                    title="Histórico da conta"
+                    aria-label="Histórico da conta"
+                    onClick={() => setShowLog(true)}
+                  >
+                    <History size={16} />
+                  </button>
+                  <button
+                    className={s.secondary}
+                    disabled
+                    title="Ajustes de saldo ainda não disponíveis na API"
+                  >
+                    Ajustar saldo
+                  </button>
+                  <button
+                    className={
+                      selected.estado === 'ATIVO' ? s.danger : s.success
+                    }
+                    disabled={!selected.id || selected.id === session?.id}
+                    title={
+                      selected.id === session?.id
+                        ? 'Não pode desativar a sua própria conta'
+                        : undefined
+                    }
+                    onClick={() => {
+                      setActionError('');
+                      setConfirm(selected);
+                    }}
+                  >
+                    {selected.estado === 'ATIVO' ? (
+                      <Ban size={15} />
+                    ) : (
+                      <Check size={15} />
+                    )}
+                    {selected.estado === 'ATIVO' ? 'Desativar' : 'Ativar'}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </aside>
+      </div>
+      {editor && (
+        <UserEditor
+          user={editor === 'new' ? undefined : editor}
+          stores={stores}
+          onClose={() => setEditor(null)}
+          onSaved={() => {
+            setEditor(null);
+            setMessage('Utilizador guardado.');
+            refresh();
+          }}
+        />
+      )}
+      {confirm && (
+        <Modal
+          title={`${confirm.estado === 'ATIVO' ? 'Desativar' : 'Ativar'} utilizador`}
+          busy={busy}
+          onClose={() => setConfirm(null)}
+        >
+          <div className={s.stack}>
+            <p>
+              Confirmar a alteração de acesso de{' '}
+              <strong>{confirm.nome || confirm.email}</strong>?
+            </p>
+            {actionError && <Notice tone="error">{actionError}</Notice>}
+            <div className={s.footer}>
+              <button
+                className={s.secondary}
+                disabled={busy}
+                onClick={() => setConfirm(null)}
+              >
+                Cancelar
               </button>
-            ) : null}
-          </form>
-        </article>
-      </section>
+              <button
+                className={s.button}
+                disabled={busy}
+                onClick={changeStatus}
+              >
+                {busy ? 'A atualizar...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+      {showLog && selected && (
+        <Modal title="Histórico da conta" onClose={() => setShowLog(false)}>
+          <div className={s.stack}>
+            <UserHistory user={selected} />
+            <Unavailable>Log completo de acessos e movimentos</Unavailable>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
 
-function formatRole(role: UserRole) {
-  return roleFilterOptions.find((option) => option.value === role)?.label ?? role;
+function UserStatus({ user }: { user: Utilizador }) {
+  return (
+    <span
+      className={s.badge}
+      data-tone={
+        user.estado === 'ATIVO'
+          ? 'success'
+          : user.estado === 'BLOQUEADO'
+            ? 'warning'
+            : 'danger'
+      }
+    >
+      {user.estado === 'ATIVO'
+        ? 'Ativo'
+        : user.estado === 'BLOQUEADO'
+          ? 'Bloqueado'
+          : user.estado === 'INATIVO'
+            ? 'Inativo'
+            : 'Indisponível'}
+    </span>
+  );
+}
+function UserHistory({ user }: { user: Utilizador }) {
+  return (
+    <ol className={s.timeline}>
+      {[
+        ['Último acesso', user.ultimoLogin],
+        ['Atualização da conta', user.updatedAt],
+        ['Registo', user.createdAt],
+      ].map(([label, date]) => (
+        <li key={label}>
+          {label}
+          <small>{formatAdminDate(date, true)}</small>
+        </li>
+      ))}
+    </ol>
+  );
 }
 
-function formatRoles(roles?: UserRole[], fallback?: UserRole) {
-  const values = roles?.length ? roles : fallback ? [fallback] : [];
-  return values.length ? values.map(formatRole).join(', ') : 'Sem papel';
-}
-
-function isInternalRole(role: UserRole): role is InternalRole {
-  return role === 'ADMIN' || role === 'MANAGER' || role === 'STORE_USER';
-}
-
-function getCreationRole(filter: RoleFilter): InternalRole {
-  return filter !== 'ALL' && isInternalRole(filter) ? filter : 'ADMIN';
-}
-
-function formatDate(value?: string) {
-  if (!value) {
-    return '-';
+function UserEditor({
+  user,
+  stores,
+  onClose,
+  onSaved,
+}: {
+  user?: Utilizador;
+  stores: Loja[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState({
+    nome: user?.nome ?? '',
+    email: user?.email ?? '',
+    telefone: user?.telefone ?? '',
+    role: user?.role ?? 'MANAGER',
+    lojaId: '',
+    cargo: '',
+    password: '',
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  function field(key: keyof typeof form, value: string) {
+    setForm((old) => ({ ...old, [key]: value }));
   }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return '-';
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    let profileSaved = false;
+    try {
+      if (user?.id) {
+        await updateUtilizador(user.id, {
+          nome: form.nome.trim(),
+          email: form.email.trim(),
+          telefone: form.telefone.trim(),
+        });
+        profileSaved = true;
+        if (form.lojaId && (user.roles ?? [user.role]).includes('STORE_USER'))
+          await associateUtilizadorLoja(
+            user.id,
+            Number(form.lojaId),
+            form.cargo.trim() || undefined,
+          );
+      } else {
+        if (form.role === 'CUSTOMER')
+          throw new Error(
+            'A criação administrativa destina-se a contas internas.',
+          );
+        await createUtilizador({
+          ...form,
+          nome: form.nome.trim(),
+          email: form.email.trim(),
+          role: form.role,
+          lojaId: form.lojaId ? Number(form.lojaId) : undefined,
+        });
+      }
+      onSaved();
+    } catch (e) {
+      setError(
+        `${profileSaved ? 'Dados pessoais guardados; a associação à loja falhou. ' : ''}${errorText(e)}`,
+      );
+    } finally {
+      setBusy(false);
+    }
   }
-
-  return new Intl.DateTimeFormat('pt-AO', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date);
-}
-
-function getInitials(name?: string, email?: string) {
-  const source = name?.trim() || email?.trim() || 'U';
-  const parts = source.split(/\s+/).filter(Boolean);
-
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase();
-  }
-
-  return `${parts[0][0]}${parts.at(-1)?.[0] ?? ''}`.toUpperCase();
-}
-
-function getMessageClassName(message: string) {
-  return message.includes('sucesso') ? 'form-success' : 'form-error';
-}
-
-function getErrorMessage(error: unknown) {
-  if (error instanceof ApiError || error instanceof Error) {
-    return error.message;
-  }
-
-  return 'Nao foi possivel carregar utilizadores.';
+  const merchant = user
+    ? (user.roles ?? [user.role]).includes('STORE_USER')
+    : form.role === 'STORE_USER';
+  return (
+    <Modal
+      title={user ? 'Editar utilizador' : 'Novo utilizador'}
+      onClose={onClose}
+      busy={busy}
+    >
+      <form className={s.form} onSubmit={submit}>
+        <label>
+          Nome
+          <input
+            required
+            maxLength={120}
+            value={form.nome}
+            onChange={(e) => field('nome', e.target.value)}
+          />
+        </label>
+        <div className={s.detailGrid}>
+          <label>
+            Email
+            <input
+              required
+              type="email"
+              value={form.email}
+              onChange={(e) => field('email', e.target.value)}
+            />
+          </label>
+          <label>
+            Telefone
+            <input
+              type="tel"
+              value={form.telefone}
+              onChange={(e) => field('telefone', e.target.value)}
+            />
+          </label>
+        </div>
+        <label>
+          Função
+          <select
+            value={form.role}
+            disabled={!!user}
+            onChange={(e) => field('role', e.target.value)}
+          >
+            {Object.entries(roles)
+              .filter(([r]) => !!user || r !== 'CUSTOMER')
+              .map(([r, name]) => (
+                <option key={r} value={r}>
+                  {name}
+                </option>
+              ))}
+          </select>
+        </label>
+        {merchant && (
+          <>
+            <label>
+              {user ? 'Associar a uma loja' : 'Loja de registo'}
+              <select
+                value={form.lojaId}
+                required={!user}
+                onChange={(e) => field('lojaId', e.target.value)}
+              >
+                <option value="">
+                  {user ? 'Manter associação atual' : 'Selecionar loja'}
+                </option>
+                {stores.map((store) => (
+                  <option key={store.id} value={store.id}>
+                    {store.nome}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {!stores.length && (
+              <Notice>
+                Não foi possível obter lojas. Feche e atualize a página para
+                tentar novamente.
+              </Notice>
+            )}
+            <label>
+              Cargo
+              <input
+                value={form.cargo}
+                onChange={(e) => field('cargo', e.target.value)}
+              />
+            </label>
+          </>
+        )}
+        {!user && (
+          <label>
+            Palavra-passe
+            <input
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={8}
+              value={form.password}
+              onChange={(e) => field('password', e.target.value)}
+            />
+          </label>
+        )}
+        {error && <Notice tone="error">{error}</Notice>}
+        <div className={s.footer}>
+          <button
+            type="button"
+            className={s.secondary}
+            disabled={busy}
+            onClick={onClose}
+          >
+            Cancelar
+          </button>
+          <button className={s.button} disabled={busy}>
+            {busy ? 'A guardar...' : 'Guardar utilizador'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
 }

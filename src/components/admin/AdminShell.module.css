@@ -47,7 +47,9 @@
   line-height: 18px;
   padding: 0 16px;
   text-align: left;
-  transition: background-color 150ms ease, color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
 .navLink:hover,
@@ -91,7 +93,8 @@
   display: flex;
   min-height: 84px;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  gap: 20px;
   padding: 20px 32px 10px;
 }
 
@@ -107,6 +110,33 @@
   background: rgba(255, 255, 255, 0.12);
   color: #8b321f;
   padding: 0 14px;
+}
+
+.identityLink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--primary);
+  min-width: 0;
+  font-size: 14px;
+}
+.identityLink > span:first-child {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.identityLink > span:last-child {
+  background: var(--primary);
+  color: white;
+}
+@media (max-width: 620px) {
+  .identityLink > span:first-child {
+    display: none;
+  }
+  .topbar {
+    gap: 12px;
+  }
 }
 
 .searchButton {
