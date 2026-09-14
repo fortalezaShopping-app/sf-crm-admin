@@ -1,5 +1,9 @@
 'use client';
 
+import { Modal } from '@/components/admin/Workspace';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   type FormEvent,
   useCallback,
@@ -111,34 +115,15 @@ export function CarrosselClient() {
     [],
   );
 
-  useEffect(() => {
-    if (!isEditorOpen) {
-      return;
-    }
-
-    const previousOverflow = document.body.style.overflow;
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !isSubmitting) {
-        closeEditor();
-      }
-    }
-
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [closeEditor, isEditorOpen, isSubmitting]);
-
   const filteredSlides = useMemo(() => {
     return slides.filter((slide) =>
       matchesSearchQuery(deferredQuery, [slide.id, slide.title]),
     );
   }, [deferredQuery, slides]);
-  const totalPages = Math.max(1, Math.ceil(filteredSlides.length / ITEMS_PER_PAGE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredSlides.length / ITEMS_PER_PAGE),
+  );
   const visiblePage = Math.min(page, totalPages - 1);
   const visibleSlides = filteredSlides.slice(
     visiblePage * ITEMS_PER_PAGE,
@@ -226,7 +211,9 @@ export function CarrosselClient() {
       return;
     }
 
-    if (!window.confirm(`Eliminar o slide “${slide.title ?? `#${slide.id}`}”?`)) {
+    if (
+      !window.confirm(`Eliminar o slide “${slide.title ?? `#${slide.id}`}”?`)
+    ) {
       return;
     }
 
@@ -251,15 +238,19 @@ export function CarrosselClient() {
           <h1>Carrossel da Home</h1>
           <p>Gira as imagens principais apresentadas no aplicativo mobile.</p>
         </div>
-        <button className={styles.createButton} onClick={openCreateSlide} type="button">
+        <Button variant="default" onClick={openCreateSlide} type="button">
           <Plus aria-hidden size={17} />
           Novo slide
-        </button>
+        </Button>
       </header>
 
       {message && !isEditorOpen ? (
         <p
-          className={message.includes('sucesso') ? styles.successNotice : styles.errorNotice}
+          className={
+            message.includes('sucesso')
+              ? styles.successNotice
+              : styles.errorNotice
+          }
           role={message.includes('sucesso') ? 'status' : 'alert'}
         >
           {message}
@@ -270,11 +261,15 @@ export function CarrosselClient() {
         <div className={styles.toolbar}>
           <div>
             <strong>{filteredSlides.length}</strong>
-            <span>{filteredSlides.length === 1 ? ' slide publicado' : ' slides publicados'}</span>
+            <span>
+              {filteredSlides.length === 1
+                ? ' slide publicado'
+                : ' slides publicados'}
+            </span>
           </div>
           <label className={styles.searchField}>
             <Search aria-hidden size={14} />
-            <input
+            <Input
               aria-label="Pesquisar slides"
               autoComplete="off"
               onChange={(event) => {
@@ -292,7 +287,10 @@ export function CarrosselClient() {
         <div className={styles.slidesGrid}>
           {visibleSlides.length > 0 ? (
             visibleSlides.map((slide) => (
-              <article className={styles.slideCard} key={slide.id ?? slide.title}>
+              <article
+                className={styles.slideCard}
+                key={slide.id ?? slide.title}
+              >
                 <CarouselImage
                   available={Boolean(slide.imageUrl)}
                   id={slide.id}
@@ -302,7 +300,10 @@ export function CarrosselClient() {
                 <div className={styles.slideBody}>
                   <div>
                     <h2>{slide.title || 'Slide sem título'}</h2>
-                    <p>Atualizado {formatDate(slide.updatedAt ?? slide.createdAt)}</p>
+                    <p>
+                      Atualizado{' '}
+                      {formatDate(slide.updatedAt ?? slide.createdAt)}
+                    </p>
                   </div>
                   <div className={styles.actions}>
                     {slide.id && slide.imageUrl ? (
@@ -316,7 +317,7 @@ export function CarrosselClient() {
                         <ExternalLink aria-hidden size={15} />
                       </a>
                     ) : null}
-                    <button
+                    <Button
                       aria-label={`Editar ${slide.title ?? 'slide'}`}
                       disabled={!slide.id || actionId === `edit-${slide.id}`}
                       onClick={() => void startEditing(slide)}
@@ -324,8 +325,10 @@ export function CarrosselClient() {
                       type="button"
                     >
                       <Pencil aria-hidden size={15} />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="plain"
+                      size="plain"
                       aria-label={`Eliminar ${slide.title ?? 'slide'}`}
                       className={styles.deleteAction}
                       disabled={!slide.id || actionId === `delete-${slide.id}`}
@@ -334,7 +337,7 @@ export function CarrosselClient() {
                       type="button"
                     >
                       <Trash2 aria-hidden size={15} />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </article>
@@ -342,8 +345,16 @@ export function CarrosselClient() {
           ) : (
             <div className={styles.emptyState}>
               <Images aria-hidden size={34} strokeWidth={1.4} />
-              <strong>{isLoading ? 'A carregar carrossel...' : 'Ainda não existem slides'}</strong>
-              {!isLoading ? <span>Publique a primeira imagem para a Home do aplicativo.</span> : null}
+              <strong>
+                {isLoading
+                  ? 'A carregar carrossel...'
+                  : 'Ainda não existem slides'}
+              </strong>
+              {!isLoading ? (
+                <span>
+                  Publique a primeira imagem para a Home do aplicativo.
+                </span>
+              ) : null}
             </div>
           )}
         </div>
@@ -360,121 +371,102 @@ export function CarrosselClient() {
       </section>
 
       {isEditorOpen ? (
-        <div
-          className={styles.modalBackdrop}
-          onMouseDown={(event) => {
-            if (event.currentTarget === event.target && !isSubmitting) {
-              closeEditor();
-            }
-          }}
-          role="presentation"
+        <Modal
+          title={editingSlideId ? 'Editar slide' : 'Novo slide'}
+          busy={isSubmitting}
+          onClose={closeEditor}
+          wide
         >
-          <article
-            aria-labelledby="carousel-editor-title"
-            aria-modal="true"
-            className={styles.modal}
-            role="dialog"
-          >
-            <header className={styles.modalHeader}>
-              <span className={styles.modalTitleIcon}>
-                <Images aria-hidden size={19} />
-              </span>
-              <div>
-                <h2 id="carousel-editor-title">
-                  {editingSlideId ? 'Editar slide' : 'Novo slide'}
-                </h2>
-                <p>Imagem principal da Home mobile</p>
+          {message ? (
+            <p className={styles.modalError} role="alert">
+              {message}
+            </p>
+          ) : null}
+
+          <div className={styles.modalBody}>
+            <figure className={styles.previewPanel}>
+              <figcaption>
+                <span>Pré-visualização</span>
+                <small>9:16</small>
+              </figcaption>
+              <div className={styles.previewViewport}>
+                <CarouselImage
+                  available={Boolean(
+                    editingSlideId &&
+                    slides.find((slide) => slide.id === editingSlideId)
+                      ?.imageUrl,
+                  )}
+                  id={editingSlideId ?? undefined}
+                  previewUrl={imagePreviewUrl}
+                  size="form"
+                  title={title}
+                  version={imageVersion}
+                />
               </div>
-              <button
-                aria-label="Fechar formulário"
-                className={styles.closeButton}
-                disabled={isSubmitting}
-                onClick={closeEditor}
-                type="button"
-              >
-                <X aria-hidden size={19} />
-              </button>
-            </header>
+            </figure>
 
-            {message ? (
-              <p className={styles.modalError} role="alert">
-                {message}
-              </p>
-            ) : null}
-
-            <div className={styles.modalBody}>
-              <figure className={styles.previewPanel}>
-                <figcaption>
-                  <span>Pré-visualização</span>
-                  <small>9:16</small>
-                </figcaption>
-                <div className={styles.previewViewport}>
-                  <CarouselImage
-                    available={Boolean(
-                      editingSlideId &&
-                        slides.find((slide) => slide.id === editingSlideId)?.imageUrl
-                    )}
-                    id={editingSlideId ?? undefined}
-                    previewUrl={imagePreviewUrl}
-                    size="form"
-                    title={title}
-                    version={imageVersion}
+            <form className={styles.form} onSubmit={handleSubmit}>
+              <label>
+                Título interno
+                <Input
+                  maxLength={200}
+                  onChange={(event) => setTitle(event.target.value)}
+                  placeholder="Ex.: Campanha de agosto"
+                  required
+                  value={title}
+                />
+              </label>
+              <label className={styles.fileLabel}>
+                <span className={styles.fieldLabel}>
+                  {editingSlideId ? 'Substituir imagem' : 'Imagem do carrossel'}
+                </span>
+                <span className={styles.filePicker}>
+                  <span className={styles.filePickerAction}>
+                    <ImageUp aria-hidden size={15} />
+                    Selecionar imagem
+                  </span>
+                  <span className={styles.filePickerName}>
+                    {image?.name ??
+                      (editingSlideId ? 'Imagem atual' : 'Nenhum ficheiro')}
+                  </span>
+                  <Input
+                    accept="image/jpeg,image/png,image/webp"
+                    className={styles.fileInput}
+                    disabled={isSubmitting}
+                    onChange={(event) =>
+                      setImageFile(event.target.files?.[0] ?? null)
+                    }
+                    required={!editingSlideId}
+                    type="file"
                   />
-                </div>
-              </figure>
-
-              <form className={styles.form} onSubmit={handleSubmit}>
-                <label>
-                  Título interno
-                  <input
-                    maxLength={200}
-                    onChange={(event) => setTitle(event.target.value)}
-                    placeholder="Ex.: Campanha de agosto"
-                    required
-                    value={title}
-                  />
-                </label>
-                <label className={styles.fileLabel}>
-                  <span className={styles.fieldLabel}>
-                    {editingSlideId ? 'Substituir imagem' : 'Imagem do carrossel'}
-                  </span>
-                  <span className={styles.filePicker}>
-                    <span className={styles.filePickerAction}>
-                      <ImageUp aria-hidden size={15} />
-                      Selecionar imagem
-                    </span>
-                    <span className={styles.filePickerName}>
-                      {image?.name ?? (editingSlideId ? 'Imagem atual' : 'Nenhum ficheiro')}
-                    </span>
-                    <input
-                      accept="image/jpeg,image/png,image/webp"
-                      className={styles.fileInput}
-                      disabled={isSubmitting}
-                      onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
-                      required={!editingSlideId}
-                      type="file"
-                    />
-                  </span>
-                  <span className={styles.fieldHint}>
-                    {editingSlideId && !image
-                      ? 'A imagem atual será preservada.'
-                      : 'PNG, JPG ou WebP em formato vertical.'}
-                  </span>
-                </label>
-                <div className={styles.formActions}>
-                  <button className={styles.primaryButton} disabled={isSubmitting} type="submit">
-                    {editingSlideId ? <Save aria-hidden size={16} /> : <Plus aria-hidden size={16} />}
-                    {isSubmitting ? 'A guardar...' : editingSlideId ? 'Guardar alterações' : 'Publicar slide'}
-                  </button>
-                  <button className={styles.secondaryButton} onClick={closeEditor} type="button">
-                    <X aria-hidden size={16} />
-                    Cancelar
-                  </button>
-                </div>
-              </form>
-            </div>
-          </article>
-        </div>
+                </span>
+                <span className={styles.fieldHint}>
+                  {editingSlideId && !image
+                    ? 'A imagem atual será preservada.'
+                    : 'PNG, JPG ou WebP em formato vertical.'}
+                </span>
+              </label>
+              <div className={styles.formActions}>
+                <Button variant="default" disabled={isSubmitting} type="submit">
+                  {editingSlideId ? (
+                    <Save aria-hidden size={16} />
+                  ) : (
+                    <Plus aria-hidden size={16} />
+                  )}
+                  {isSubmitting
+                    ? 'A guardar...'
+                    : editingSlideId
+                      ? 'Guardar alterações'
+                      : 'Publicar slide'}
+                </Button>
+                <Button variant="outline" onClick={closeEditor} type="button">
+                  <X aria-hidden size={16} />
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </div>
+        </Modal>
       ) : null}
     </div>
   );

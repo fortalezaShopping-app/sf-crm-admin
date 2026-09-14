@@ -1,13 +1,12 @@
 'use client';
 
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { FormEvent, useState } from 'react';
 import { LockKeyhole, Mail } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import {
-  ApiError,
-  loginAdminSession,
-} from '@/lib/api';
+import { ApiError, loginAdminSession } from '@/lib/api';
 
 import styles from './login.module.css';
 
@@ -47,7 +46,7 @@ export function LoginForm() {
         </label>
         <div className={styles.inputShell}>
           <Mail aria-hidden size={17} strokeWidth={1.7} />
-          <input
+          <Input
             autoComplete="email"
             id="email"
             inputMode="email"
@@ -67,7 +66,7 @@ export function LoginForm() {
         </label>
         <div className={styles.inputShell}>
           <LockKeyhole aria-hidden size={17} strokeWidth={1.7} />
-          <input
+          <Input
             autoComplete="current-password"
             id="password"
             name="password"
@@ -86,13 +85,14 @@ export function LoginForm() {
         </p>
       ) : null}
 
-      <button
-        className={styles.submitButton}
+      <Button
+        variant="default"
+        className="min-h-[46px] w-full"
         disabled={isSubmitting}
         type="submit"
       >
         {isSubmitting ? 'A iniciar...' : 'Iniciar sessão'}
-      </button>
+      </Button>
     </form>
   );
 }

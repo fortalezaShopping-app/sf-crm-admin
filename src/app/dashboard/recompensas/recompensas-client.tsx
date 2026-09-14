@@ -1,5 +1,11 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { IconButton } from '@/components/ui/icon-button';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { NativeSelect } from '@/components/ui/native-select';
 import Image from 'next/image';
 import { useEffect, useState, type FormEvent } from 'react';
 import { ArrowLeft, Pencil, Plus, RefreshCw, Search } from 'lucide-react';
@@ -83,10 +89,10 @@ export function RecompensasClient() {
               ]),
             ]}
           />
-          <button className={s.button} onClick={() => setEditor('new')}>
+          <Button variant="default" onClick={() => setEditor('new')}>
             <Plus size={16} />
             Nova recompensa
-          </button>
+          </Button>
         </div>
       </header>
       {error && <Notice tone="error">{error}</Notice>}
@@ -124,7 +130,9 @@ export function RecompensasClient() {
               ['available', 'Com stock'],
               ['empty', 'Esgotadas'],
             ].map(([value, label]) => (
-              <button
+              <Button
+                variant="plain"
+                size="plain"
                 key={value}
                 className={s.segment}
                 aria-pressed={filter === value}
@@ -134,13 +142,13 @@ export function RecompensasClient() {
                 }}
               >
                 {label}
-              </button>
+              </Button>
             ))}
           </div>
           <div className={s.toolbar}>
             <label className={s.search}>
               <Search size={16} />
-              <input
+              <Input
                 aria-label="Pesquisar recompensas"
                 placeholder="Pesquisar recompensas"
                 value={query}
@@ -150,8 +158,7 @@ export function RecompensasClient() {
                 }}
               />
             </label>
-            <button
-              className={s.iconButton}
+            <IconButton
               title="Atualizar recompensas"
               aria-label="Atualizar recompensas"
               disabled={loading}
@@ -162,7 +169,7 @@ export function RecompensasClient() {
               }}
             >
               <RefreshCw size={16} />
-            </button>
+            </IconButton>
           </div>
         </div>
         {loading ? (
@@ -186,7 +193,9 @@ export function RecompensasClient() {
                 {filtered.slice(current * 10, current * 10 + 10).map((r) => (
                   <tr key={r.id}>
                     <td>
-                      <button
+                      <Button
+                        variant="plain"
+                        size="plain"
                         className={s.nameButton}
                         onClick={() => setEditor(r)}
                       >
@@ -195,7 +204,7 @@ export function RecompensasClient() {
                           <strong>{r.name}</strong>
                           <small>{r.storeName || r.type}</small>
                         </span>
-                      </button>
+                      </Button>
                     </td>
                     <td>{formatNumber(r.requiredPoints)} pts</td>
                     <td>
@@ -204,8 +213,8 @@ export function RecompensasClient() {
                         : '-'}
                     </td>
                     <td>
-                      <span
-                        className={s.badge}
+                      <Badge
+                        variant="secondary"
                         data-tone={r.stock === 0 ? 'warning' : undefined}
                       >
                         {r.stock === 0
@@ -213,25 +222,22 @@ export function RecompensasClient() {
                           : rewardAvailability(r.stock) === 'available'
                             ? 'Com stock'
                             : 'Indisponível'}
-                      </span>
+                      </Badge>
                     </td>
                     <td title="Contagem não fornecida pela API">-</td>
                     <td>
                       <div className={s.actions}>
-                        <button
-                          className={s.secondary}
-                          onClick={() => setEditor(r)}
-                        >
+                        <Button variant="outline" onClick={() => setEditor(r)}>
                           <Pencil size={15} />
                           Editar
-                        </button>
-                        <button
-                          className={s.secondary}
+                        </Button>
+                        <Button
+                          variant="outline"
                           disabled
                           title="Alteração de estado indisponível na API"
                         >
                           Desativar
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -321,7 +327,7 @@ function RewardEditor({
           <>
             <label>
               Nome da recompensa
-              <input
+              <Input
                 required
                 maxLength={200}
                 value={form.name}
@@ -330,7 +336,7 @@ function RewardEditor({
             </label>
             <label>
               Descrição
-              <textarea
+              <Textarea
                 rows={3}
                 value={form.description}
                 onChange={(e) => field('description', e.target.value)}
@@ -339,7 +345,7 @@ function RewardEditor({
             <div className={s.detailGrid}>
               <label>
                 Custo em pontos
-                <input
+                <Input
                   type="number"
                   min={1}
                   step={1}
@@ -350,7 +356,7 @@ function RewardEditor({
               </label>
               <label>
                 Categoria
-                <select
+                <NativeSelect
                   required
                   value={form.category}
                   onChange={(e) => field('category', e.target.value)}
@@ -365,12 +371,12 @@ function RewardEditor({
                   ].map((v) => (
                     <option key={v}>{v}</option>
                   ))}
-                </select>
+                </NativeSelect>
               </label>
             </div>
             <label>
               Imagem
-              <input
+              <Input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 onChange={(e) => {
@@ -426,7 +432,7 @@ function RewardEditor({
               {form.limited === 'limited' && (
                 <label>
                   Quantidade
-                  <input
+                  <Input
                     required
                     type="number"
                     min={0}
@@ -462,7 +468,7 @@ function RewardEditor({
               {form.expiry === 'date' && (
                 <label>
                   Data de validade
-                  <input
+                  <Input
                     required
                     type="date"
                     min={new Date().toLocaleDateString('en-CA', {
@@ -516,25 +522,25 @@ function RewardEditor({
         )}
         {error && <Notice tone="error">{error}</Notice>}
         <footer className={s.footer}>
-          <button
+          <Button
             type="button"
-            className={s.secondary}
+            variant="outline"
             onClick={() => (review ? setReview(false) : onClose())}
           >
             {review && <ArrowLeft size={16} />}
             {review ? 'Voltar' : 'Cancelar'}
-          </button>
+          </Button>
           {review ? (
-            <button
+            <Button
               type="button"
-              className={s.button}
+              variant="default"
               disabled
               title="Aguarda suporte da API"
             >
               Guardar recompensa
-            </button>
+            </Button>
           ) : (
-            <button className={s.button}>Continuar</button>
+            <Button variant="default">Continuar</Button>
           )}
         </footer>
       </form>

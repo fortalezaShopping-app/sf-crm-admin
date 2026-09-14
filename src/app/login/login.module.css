@@ -121,6 +121,7 @@
 }
 
 .inputShell input {
+  box-shadow: none;
   width: 100%;
   min-width: 0;
   border: 0;
@@ -137,40 +138,6 @@
 .inputShell input::placeholder {
   color: #8b321f;
   opacity: 1;
-}
-
-.submitButton {
-  display: inline-flex;
-  min-height: 46px;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 7px;
-  background: #8b321f;
-  color: #ffffff;
-  font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 18px;
-  transition: background-color 160ms ease, transform 160ms ease;
-}
-
-.submitButton:hover:not(:disabled) {
-  background: #6b2618;
-}
-
-.submitButton:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.submitButton:focus-visible {
-  outline: 3px solid rgba(243, 111, 50, 0.52);
-  outline-offset: 3px;
-}
-
-.submitButton:disabled {
-  cursor: wait;
-  opacity: 0.72;
 }
 
 .formError {

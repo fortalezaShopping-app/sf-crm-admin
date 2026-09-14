@@ -1,5 +1,10 @@
 'use client';
 
+import { IconButton } from '@/components/ui/icon-button';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -213,15 +218,14 @@ export function ComprovativosClient() {
               ]),
             ]}
           />
-          <button
-            className={s.iconButton}
+          <IconButton
             title="Atualizar talões"
             aria-label="Atualizar talões"
             disabled={loading || busy}
             onClick={refresh}
           >
             <RefreshCw size={16} />
-          </button>
+          </IconButton>
         </div>
       </header>
       {error && <Notice tone="error">{error}</Notice>}
@@ -240,7 +244,9 @@ export function ComprovativosClient() {
                 ['PENDING_VALIDATION', 'Pendentes'],
                 ['REJECTED', 'Rejeitadas'],
               ].map(([value, label]) => (
-                <button
+                <Button
+                  variant="plain"
+                  size="plain"
                   key={value}
                   className={s.segment}
                   aria-pressed={filter === value}
@@ -255,12 +261,12 @@ export function ComprovativosClient() {
                   }}
                 >
                   {label}
-                </button>
+                </Button>
               ))}
             </div>
             <label className={s.search}>
               <Search size={16} />
-              <input
+              <Input
                 aria-label="Pesquisar faturas"
                 placeholder="Loja, número, NIF ou valor"
                 value={query}
@@ -292,7 +298,9 @@ export function ComprovativosClient() {
                       className={i.id === selectedId ? s.selected : undefined}
                     >
                       <td>
-                        <button
+                        <Button
+                          variant="plain"
+                          size="plain"
                           className={s.nameButton}
                           aria-pressed={i.id === selectedId}
                           disabled={busy}
@@ -313,7 +321,7 @@ export function ComprovativosClient() {
                             <small>{i.invoiceNumber || `#${i.id}`}</small>
                             <small>{formatAdminDate(i.invoiceDate)}</small>
                           </span>
-                        </button>
+                        </Button>
                       </td>
                       <td>
                         <InvoiceStatus status={i.status} />
@@ -390,7 +398,7 @@ export function ComprovativosClient() {
                     <>
                       <label className={s.form}>
                         Nota da validação
-                        <textarea
+                        <Textarea
                           aria-label="Nota da validação"
                           rows={3}
                           value={note}
@@ -399,8 +407,8 @@ export function ComprovativosClient() {
                         />
                       </label>
                       <div className={s.actions}>
-                        <button
-                          className={s.success}
+                        <Button
+                          variant="success"
                           disabled={busy}
                           onClick={() => {
                             setActionError('');
@@ -410,9 +418,9 @@ export function ComprovativosClient() {
                         >
                           <Check size={16} />
                           Aprovar
-                        </button>
-                        <button
-                          className={s.danger}
+                        </Button>
+                        <Button
+                          variant="destructive"
                           disabled={busy}
                           onClick={() => {
                             setActionError('');
@@ -422,7 +430,7 @@ export function ComprovativosClient() {
                         >
                           <X size={16} />
                           Rejeitar
-                        </button>
+                        </Button>
                       </div>
                     </>
                   )}
@@ -447,13 +455,13 @@ export function ComprovativosClient() {
                       )}
                     </dl>
                   )}
-                  <button
-                    className={s.secondary}
+                  <Button
+                    variant="outline"
                     disabled
                     title="Pedido de informação à loja indisponível na API"
                   >
                     Solicitar informação à loja
-                  </button>
+                  </Button>
                   <details>
                     <summary>Dados OCR</summary>
                     {loaded && ocr ? (
@@ -506,15 +514,14 @@ export function ComprovativosClient() {
         <section className={s.panel}>
           <header className={s.panelHeader}>
             <h2>Imagem da fatura</h2>
-            <button
-              className={s.iconButton}
+            <IconButton
               title="Ampliar fatura"
               aria-label="Ampliar fatura"
               disabled={!selectedId}
               onClick={() => setZoom(true)}
             >
               <ZoomIn size={16} />
-            </button>
+            </IconButton>
           </header>
           {selectedId ? (
             <InvoicePreview
@@ -553,7 +560,7 @@ export function ComprovativosClient() {
             {decision === 'REJECTED' && (
               <label className={s.form}>
                 Motivo da rejeição
-                <textarea
+                <Textarea
                   rows={3}
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
@@ -562,22 +569,22 @@ export function ComprovativosClient() {
             )}
             {actionError && <Notice tone="error">{actionError}</Notice>}
             <div className={s.footer}>
-              <button
-                className={s.secondary}
+              <Button
+                variant="outline"
                 disabled={busy}
                 onClick={() => setDecision(null)}
               >
                 Cancelar
-              </button>
-              <button
-                className={decision === 'APPROVED' ? s.success : s.danger}
+              </Button>
+              <Button
+                variant={decision === 'APPROVED' ? 'success' : 'destructive'}
                 disabled={
                   busy || !canValidate || selectedId !== decisionInvoiceId
                 }
                 onClick={confirmValidation}
               >
                 {busy ? 'A guardar...' : 'Confirmar decisão'}
-              </button>
+              </Button>
             </div>
           </div>
         </Modal>
@@ -588,8 +595,8 @@ export function ComprovativosClient() {
 
 function InvoiceStatus({ status }: { status?: string }) {
   return (
-    <span
-      className={s.badge}
+    <Badge
+      variant="secondary"
       data-tone={
         status === 'APPROVED'
           ? 'success'
@@ -599,7 +606,7 @@ function InvoiceStatus({ status }: { status?: string }) {
       }
     >
       {statusNames[status ?? ''] ?? status ?? 'Indisponível'}
-    </span>
+    </Badge>
   );
 }
 function InvoicePreview({
@@ -640,24 +647,24 @@ function InvoicePreview({
         )}
       </div>
       <div className={s.actions}>
-        <button
-          className={s.iconButton}
+        <IconButton
           title="Rodar imagem"
           aria-label="Rodar imagem"
           disabled={failed}
           onClick={() => setRotation((r) => (r + 90) % 360)}
         >
           <RotateCw size={16} />
-        </button>
-        <a
-          className={s.secondary}
-          href={getFaturaImagePath(id, version)}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <ExternalLink size={16} />
-          Abrir original
-        </a>
+        </IconButton>
+        <Button asChild variant="outline">
+          <a
+            href={getFaturaImagePath(id, version)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <ExternalLink size={16} />
+            Abrir original
+          </a>
+        </Button>
       </div>
     </div>
   );

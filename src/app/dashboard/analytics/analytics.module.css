@@ -78,31 +78,6 @@
   color: #ffffff;
 }
 
-.exportButton {
-  display: inline-flex;
-  min-height: 42px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px solid #8b321f;
-  border-radius: 7px;
-  background: #8b321f;
-  color: #ffffff;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  padding: 0 18px;
-}
-
-.exportButton:hover:not(:disabled) {
-  background: #6b2618;
-}
-
-.exportButton:disabled {
-  cursor: not-allowed;
-  opacity: 0.58;
-}
-
 .errorNotice {
   margin: -10px 0 0;
   border: 1px solid rgba(180, 35, 24, 0.22);
@@ -329,8 +304,7 @@
   }
 
   .headingActions,
-  .periodTabs,
-  .exportButton {
+  .periodTabs {
     width: 100%;
   }
 

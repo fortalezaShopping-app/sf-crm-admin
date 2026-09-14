@@ -1,5 +1,9 @@
 'use client';
 
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { NativeSelect } from '@/components/ui/native-select';
+import { Button } from '@/components/ui/button';
 import { useState, type FormEvent } from 'react';
 import { ArrowLeft, ArrowRight, Send } from 'lucide-react';
 import type { Loja } from '@/lib/api';
@@ -66,7 +70,7 @@ export function CampaignWizard({
           <>
             <label>
               Título da mensagem
-              <input
+              <Input
                 required
                 maxLength={100}
                 value={form.title}
@@ -75,7 +79,7 @@ export function CampaignWizard({
             </label>
             <label>
               Corpo da mensagem
-              <textarea
+              <Textarea
                 required
                 rows={4}
                 maxLength={1000}
@@ -85,7 +89,7 @@ export function CampaignWizard({
             </label>
             <label>
               Destino
-              <select
+              <NativeSelect
                 value={form.link}
                 onChange={(e) => field('link', e.target.value)}
               >
@@ -94,7 +98,7 @@ export function CampaignWizard({
                     <option key={name}>{name}</option>
                   ),
                 )}
-              </select>
+              </NativeSelect>
             </label>
           </>
         )}
@@ -123,20 +127,20 @@ export function CampaignWizard({
             {form.audience === 'level' && (
               <label>
                 Nível
-                <select
+                <NativeSelect
                   value={form.level}
                   onChange={(e) => field('level', e.target.value)}
                 >
                   {['Iniciante', 'Intermédio', 'Avançado'].map((v) => (
                     <option key={v}>{v}</option>
                   ))}
-                </select>
+                </NativeSelect>
               </label>
             )}
             {form.audience === 'behavior' && (
               <label>
                 Comportamento
-                <select
+                <NativeSelect
                   value={form.behavior}
                   onChange={(e) => field('behavior', e.target.value)}
                 >
@@ -149,13 +153,13 @@ export function CampaignWizard({
                   ].map((v) => (
                     <option key={v}>{v}</option>
                   ))}
-                </select>
+                </NativeSelect>
               </label>
             )}
             {form.audience === 'store' && (
               <label>
                 Loja visitada
-                <select
+                <NativeSelect
                   required
                   value={form.store}
                   onChange={(e) => field('store', e.target.value)}
@@ -166,7 +170,7 @@ export function CampaignWizard({
                       {store.nome}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               </label>
             )}
             <p className={s.muted}>Estimativa de alcance: indisponível</p>
@@ -199,7 +203,7 @@ export function CampaignWizard({
               <div className={s.detailGrid}>
                 <label>
                   Data
-                  <input
+                  <Input
                     type="date"
                     required
                     value={form.date}
@@ -208,7 +212,7 @@ export function CampaignWizard({
                 </label>
                 <label>
                   Hora de Angola (UTC+1)
-                  <input
+                  <Input
                     type="time"
                     required
                     value={form.time}
@@ -263,9 +267,9 @@ export function CampaignWizard({
             ))}
           </div>
           {step > 0 && (
-            <button
+            <Button
               type="button"
-              className={s.secondary}
+              variant="outline"
               onClick={() => {
                 setError('');
                 setStep(step - 1);
@@ -273,23 +277,23 @@ export function CampaignWizard({
             >
               <ArrowLeft size={16} />
               Voltar
-            </button>
+            </Button>
           )}
           {step < 2 ? (
-            <button className={s.button}>
+            <Button variant="default">
               Continuar
               <ArrowRight size={16} />
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
               type="button"
-              className={s.button}
+              variant="default"
               disabled
               title="Aguarda suporte da API"
             >
               <Send size={16} />
               Criar campanha
-            </button>
+            </Button>
           )}
         </footer>
       </form>

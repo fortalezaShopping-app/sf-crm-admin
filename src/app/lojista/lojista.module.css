@@ -386,8 +386,6 @@
   margin-top: 16px;
 }
 
-.primaryButton,
-.secondaryButton,
 .textButton,
 .backButton {
   display: inline-flex;
@@ -404,27 +402,6 @@
   transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 
-.primaryButton {
-  border: 1px solid #8b321f;
-  background: #8b321f;
-  color: #ffffff;
-}
-
-.primaryButton:hover:not(:disabled) {
-  border-color: #6b2618;
-  background: #6b2618;
-}
-
-.secondaryButton {
-  border: 1px solid #a44e39;
-  background: #ffffff;
-  color: #8b321f;
-}
-
-.secondaryButton:hover:not(:disabled) {
-  background: #f7e5dd;
-}
-
 .textButton,
 .backButton {
   border: 1px solid transparent;
@@ -437,8 +414,6 @@
   background: #f7e5dd;
 }
 
-.primaryButton:focus-visible,
-.secondaryButton:focus-visible,
 .textButton:focus-visible,
 .backButton:focus-visible,
 .iconButton:focus-visible {
@@ -446,8 +421,6 @@
   outline-offset: 2px;
 }
 
-.primaryButton:disabled,
-.secondaryButton:disabled,
 .textButton:disabled {
   cursor: wait;
   opacity: 0.58;
@@ -577,12 +550,6 @@
 .manualForm textarea:focus {
   border-color: #8b321f;
   box-shadow: 0 0 0 3px rgba(139, 50, 31, 0.1);
-}
-
-.manualForm .primaryButton,
-.amountForm .primaryButton {
-  width: 100%;
-  margin-top: 4px;
 }
 
 .errorMessage {
@@ -801,10 +768,6 @@
   border-left: 1px solid #eaded8;
 }
 
-.successPanel .primaryButton {
-  min-width: 190px;
-}
-
 .spinner {
   animation: spin 850ms linear infinite;
 }
@@ -965,8 +928,6 @@
 
   .video,
   .iconButton,
-  .primaryButton,
-  .secondaryButton,
   .textButton,
   .backButton {
     transition: none;

@@ -1,0 +1,63 @@
+@layer theme, base, legacy, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import './globals.css' layer(legacy);
+@import 'tailwindcss/utilities.css' layer(utilities);
+@import 'tw-animate-css';
+
+@source '../';
+
+@theme inline {
+  --font-sans: var(--font-daxline), Arial, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--text);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--text);
+  --color-primary: var(--primary);
+  --color-primary-foreground: #fff;
+  --color-secondary: var(--surface-muted);
+  --color-secondary-foreground: var(--primary);
+  --color-muted: #eee5e1;
+  --color-muted-foreground: var(--muted-text);
+  --color-accent: var(--primary-muted);
+  --color-accent-foreground: var(--primary);
+  --color-destructive: var(--error);
+  --color-success: var(--success);
+  --color-border: var(--border);
+  --color-input: #d7b6aa;
+  --color-ring: var(--primary);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
+}
+
+/* Scope the reset to UI primitives so existing page layouts remain intact. */
+@layer base {
+  [data-slot] {
+    box-sizing: border-box;
+    border: 0 solid var(--border);
+    letter-spacing: 0;
+  }
+
+  :is(button, input, textarea, select)[data-slot] {
+    font-family: inherit;
+  }
+
+  [data-slot='dialog-title'],
+  [data-slot='dialog-description'] {
+    margin: 0;
+  }
+
+  label > [data-slot='native-select-wrapper'] {
+    width: 100%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-slot] {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

@@ -1,5 +1,13 @@
 'use client';
 
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+
+import { Button } from '@/components/ui/button';
+import { NativeSelect } from '@/components/ui/native-select';
+import { Input } from '@/components/ui/input';
+import { IconButton } from '@/components/ui/icon-button';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { useEffect, useState, type FormEvent } from 'react';
 import {
   Check,
@@ -141,14 +149,14 @@ export function NotificacoesClient() {
       <header className={s.heading}>
         <h1>Notificações e campanhas</h1>
         <div className={s.actions}>
-          <button className={s.secondary} onClick={() => setEditor('new')}>
+          <Button variant="outline" onClick={() => setEditor('new')}>
             <Plus size={16} />
             Criar destaque
-          </button>
-          <button className={s.button} onClick={() => setWizard(true)}>
+          </Button>
+          <Button variant="default" onClick={() => setWizard(true)}>
             <Megaphone size={16} />
             Criar campanha push
-          </button>
+          </Button>
         </div>
       </header>
       {error && <Notice tone="error">{error}</Notice>}
@@ -157,7 +165,9 @@ export function NotificacoesClient() {
         <section className={s.stack} aria-label="Notificações recebidas">
           <div className={s.toolbar}>
             <div className={s.segments}>
-              <button
+              <Button
+                variant="plain"
+                size="plain"
                 className={s.segment}
                 aria-pressed={!unread}
                 onClick={() => {
@@ -166,8 +176,10 @@ export function NotificacoesClient() {
                 }}
               >
                 Todas
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="plain"
+                size="plain"
                 className={s.segment}
                 aria-pressed={unread}
                 onClick={() => {
@@ -176,23 +188,27 @@ export function NotificacoesClient() {
                 }}
               >
                 Não lidas
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="plain"
+                size="plain"
                 className={s.segment}
                 disabled
                 title="A API não identifica o público destinatário"
               >
                 Lojas
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="plain"
+                size="plain"
                 className={s.segment}
                 disabled
                 title="A API não identifica o público destinatário"
               >
                 Utilizadores
-              </button>
+              </Button>
             </div>
-            <select
+            <NativeSelect
               className={s.select}
               aria-label="Período das notificações"
               value={period}
@@ -206,13 +222,13 @@ export function NotificacoesClient() {
               <option value="7">7 dias</option>
               <option value="30">30 dias</option>
               <option value="custom">Personalizado</option>
-            </select>
+            </NativeSelect>
           </div>
           {period === 'custom' && (
             <div className={`${s.form} ${s.detailGrid}`}>
               <label>
                 De
-                <input
+                <Input
                   type="date"
                   value={range.from}
                   max={range.to || undefined}
@@ -224,7 +240,7 @@ export function NotificacoesClient() {
               </label>
               <label>
                 Até
-                <input
+                <Input
                   type="date"
                   value={range.to}
                   min={range.from || undefined}
@@ -239,7 +255,7 @@ export function NotificacoesClient() {
           <div className={s.toolbar}>
             <label className={s.search}>
               <Search size={16} />
-              <input
+              <Input
                 aria-label="Pesquisar notificações"
                 placeholder="Pesquisar notificações"
                 value={query}
@@ -249,8 +265,7 @@ export function NotificacoesClient() {
                 }}
               />
             </label>
-            <button
-              className={s.iconButton}
+            <IconButton
               title="Atualizar notificações"
               aria-label="Atualizar notificações"
               disabled={loading}
@@ -262,7 +277,7 @@ export function NotificacoesClient() {
               }}
             >
               <RefreshCw size={16} />
-            </button>
+            </IconButton>
           </div>
           <div className={s.panel} aria-busy={loading}>
             {loading ? (
@@ -281,7 +296,9 @@ export function NotificacoesClient() {
                     </time>
                   </div>
                   {!n.lida ? (
-                    <button
+                    <Button
+                      variant="plain"
+                      size="plain"
                       className={s.unread}
                       title="Marcar como lida"
                       aria-label={`Marcar como lida: ${n.titulo}`}
@@ -303,38 +320,30 @@ export function NotificacoesClient() {
           </div>
         </section>
         <section className={s.panel} aria-label="Campanhas e destaques">
-          <div className={s.panelHeader}>
-            <div className={s.segments}>
-              <button
-                className={s.segment}
-                aria-pressed={tab === 'campaigns'}
-                onClick={() => setTab('campaigns')}
-              >
-                Campanhas
-              </button>
-              <button
-                className={s.segment}
-                aria-pressed={tab === 'highlights'}
-                onClick={() => setTab('highlights')}
-              >
-                Destaques
-              </button>
+          <Tabs
+            value={tab}
+            onValueChange={(value) => setTab(value as typeof tab)}
+          >
+            <div className={s.panelHeader}>
+              <TabsList aria-label="Campanhas e destaques">
+                <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
+                <TabsTrigger value="highlights">Destaques</TabsTrigger>
+              </TabsList>
             </div>
-          </div>
-          {tab === 'campaigns' ? (
-            <div className={`${s.padding} ${s.stack}`}>
-              <Unavailable>Consulta e gestão de campanhas push</Unavailable>
-              <EmptyState>
-                As campanhas ficarão disponíveis após a integração do serviço de
-                envio.
-              </EmptyState>
-            </div>
-          ) : (
-            <>
+            <TabsContent value="campaigns">
+              <div className={`${s.padding} ${s.stack}`}>
+                <Unavailable>Consulta e gestão de campanhas push</Unavailable>
+                <EmptyState>
+                  As campanhas ficarão disponíveis após a integração do serviço
+                  de envio.
+                </EmptyState>
+              </div>
+            </TabsContent>
+            <TabsContent value="highlights">
               <div className={s.panelHeader}>
                 <label className={s.search}>
                   <Search size={16} />
-                  <input
+                  <Input
                     aria-label="Pesquisar destaques"
                     placeholder="Pesquisar destaques"
                     value={contentQuery}
@@ -380,19 +389,18 @@ export function NotificacoesClient() {
                               {formatAdminDate(h.publishedAt ?? h.createdAt)}
                             </td>
                             <td>
-                              <span className={s.badge}>
+                              <Badge variant="secondary">
                                 {h.status || 'Indisponível'}
-                              </span>
+                              </Badge>
                             </td>
                             <td>
-                              <button
-                                className={s.iconButton}
+                              <IconButton
                                 title={`Editar ${h.title}`}
                                 aria-label={`Editar ${h.title}`}
                                 onClick={() => setEditor(h)}
                               >
                                 <Pencil size={15} />
-                              </button>
+                              </IconButton>
                             </td>
                           </tr>
                         ))}
@@ -406,8 +414,8 @@ export function NotificacoesClient() {
                 totalItems={content.length}
                 onPageChange={setContentPage}
               />
-            </>
-          )}
+            </TabsContent>
+          </Tabs>
         </section>
       </div>
       {wizard && (
@@ -483,7 +491,7 @@ function HighlightEditor({
       <form className={s.form} onSubmit={submit}>
         <label>
           Título
-          <input
+          <Input
             required
             maxLength={200}
             value={form.title}
@@ -492,7 +500,7 @@ function HighlightEditor({
         </label>
         <label>
           Mensagem
-          <textarea
+          <Textarea
             rows={4}
             maxLength={10000}
             value={form.bodyText}
@@ -501,7 +509,7 @@ function HighlightEditor({
         </label>
         <label>
           Loja
-          <select
+          <NativeSelect
             required
             value={form.storeId}
             onChange={(e) => setForm({ ...form, storeId: e.target.value })}
@@ -512,11 +520,11 @@ function HighlightEditor({
                 {store.nome}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </label>
         <label>
           Estado
-          <input
+          <Input
             required
             list="content-statuses"
             value={form.status}
@@ -534,17 +542,17 @@ function HighlightEditor({
         </Notice>
         {error && <Notice tone="error">{error}</Notice>}
         <div className={s.footer}>
-          <button
-            className={s.secondary}
+          <Button
+            variant="outline"
             type="button"
             disabled={busy}
             onClick={onClose}
           >
             Cancelar
-          </button>
-          <button className={s.button} disabled={busy}>
+          </Button>
+          <Button variant="default" disabled={busy}>
             {busy ? 'A guardar...' : 'Guardar destaque'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

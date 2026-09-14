@@ -1,9 +1,14 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
 import { useEffect, useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
 
-import { ApiError, getDashboardSummary, type DashboardSummary } from '@/lib/api';
+import {
+  ApiError,
+  getDashboardSummary,
+  type DashboardSummary,
+} from '@/lib/api';
 
 import styles from './analytics.module.css';
 
@@ -42,7 +47,11 @@ export function AnalyticsClient() {
       })
       .catch((error: unknown) => {
         if (isMounted) {
-          setState({ error: getErrorMessage(error), isLoading: false, summary: null });
+          setState({
+            error: getErrorMessage(error),
+            isLoading: false,
+            summary: null,
+          });
         }
       });
 
@@ -60,7 +69,10 @@ export function AnalyticsClient() {
     0,
   );
   const metrics = [
-    { label: 'Volume de transações', value: state.summary?.receiptStatus.total },
+    {
+      label: 'Volume de transações',
+      value: state.summary?.receiptStatus.total,
+    },
     { label: 'Utilizadores ativos', value: state.summary?.usersTotal },
     { label: 'Pontos emitidos', value: pointsIssued },
     { label: 'Pontos resgatados', value: undefined },
@@ -75,29 +87,42 @@ export function AnalyticsClient() {
         </div>
 
         <div className={styles.headingActions}>
-          <div aria-label="Período da análise" className={styles.periodTabs} role="group">
+          <div
+            aria-label="Período da análise"
+            className={styles.periodTabs}
+            role="group"
+          >
             {periodOptions.map((option) => (
-              <button
+              <Button
+                variant="plain"
+                size="plain"
                 aria-pressed={period === option.value}
-                className={period === option.value ? styles.periodActive : styles.periodTab}
+                className={
+                  period === option.value
+                    ? styles.periodActive
+                    : styles.periodTab
+                }
                 key={option.value}
                 onClick={() => setPeriod(option.value)}
                 type="button"
               >
                 {option.label}
-              </button>
+              </Button>
             ))}
           </div>
 
-          <button
-            className={styles.exportButton}
+          <Button
+            variant="default"
+
             disabled={!state.summary}
-            onClick={() => state.summary && exportAnalyticsReport(state.summary)}
+            onClick={() =>
+              state.summary && exportAnalyticsReport(state.summary)
+            }
             type="button"
           >
             <Download aria-hidden size={17} strokeWidth={1.7} />
             Exportar relatório
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -107,18 +132,26 @@ export function AnalyticsClient() {
         </p>
       ) : null}
 
-      <section className={styles.metricsGrid} aria-label="Indicadores de desempenho">
+      <section
+        className={styles.metricsGrid}
+        aria-label="Indicadores de desempenho"
+      >
         {metrics.map((metric) => (
           <article className={styles.metricCard} key={metric.label}>
             <span>{metric.label}</span>
-            <strong>{state.isLoading ? '...' : formatMetric(metric.value)}</strong>
+            <strong>
+              {state.isLoading ? '...' : formatMetric(metric.value)}
+            </strong>
           </article>
         ))}
       </section>
 
       <section className={styles.primaryGrid}>
         <VolumeChart data={volumeData} isLoading={state.isLoading} />
-        <TopStores stores={state.summary?.topStores ?? []} isLoading={state.isLoading} />
+        <TopStores
+          stores={state.summary?.topStores ?? []}
+          isLoading={state.isLoading}
+        />
       </section>
 
       <section className={styles.secondaryGrid}>
@@ -134,7 +167,9 @@ export function AnalyticsClient() {
           <h2>Recompensas</h2>
           <div className={styles.insightContent}>
             <strong>
-              {state.isLoading ? '...' : formatMetric(state.summary?.rewardsTotal)}
+              {state.isLoading
+                ? '...'
+                : formatMetric(state.summary?.rewardsTotal)}
             </strong>
             <span>Recompensas registadas no programa.</span>
           </div>
@@ -164,7 +199,11 @@ function VolumeChart({
           data.map((item) => (
             <div className={styles.barColumn} key={item.label}>
               <span>{formatMetric(item.transactions)}</span>
-              <i style={{ height: `${Math.max(8, (item.transactions / maxValue) * 100)}%` }} />
+              <i
+                style={{
+                  height: `${Math.max(8, (item.transactions / maxValue) * 100)}%`,
+                }}
+              />
               <small>{item.label}</small>
             </div>
           ))
@@ -184,7 +223,9 @@ function TopStores({
   isLoading: boolean;
 }) {
   const topStores = stores.slice(0, 5);
-  const values = topStores.map((store) => store.pointsTotal ?? store.receiptCount);
+  const values = topStores.map(
+    (store) => store.pointsTotal ?? store.receiptCount,
+  );
   const maxValue = Math.max(1, ...values);
 
   return (
@@ -200,12 +241,17 @@ function TopStores({
             const value = store.pointsTotal ?? store.receiptCount;
 
             return (
-              <div className={styles.rankingItem} key={store.storeId ?? store.name}>
+              <div
+                className={styles.rankingItem}
+                key={store.storeId ?? store.name}
+              >
                 <span>
                   <strong>{store.name}</strong>
                   <small>{formatMetric(value)} pts</small>
                 </span>
-                <i style={{ width: `${Math.max(8, (value / maxValue) * 100)}%` }} />
+                <i
+                  style={{ width: `${Math.max(8, (value / maxValue) * 100)}%` }}
+                />
               </div>
             );
           })}
@@ -221,7 +267,8 @@ function filterVolumeByPeriod(
   data: DashboardSummary['volumeByPeriod'],
   period: Period,
 ) {
-  const visibleItems = period === 'today' ? 1 : period === '3d' ? 3 : period === '7d' ? 7 : 30;
+  const visibleItems =
+    period === 'today' ? 1 : period === '3d' ? 3 : period === '7d' ? 7 : 30;
 
   return period === 'custom' ? data : data.slice(-visibleItems);
 }
@@ -260,7 +307,9 @@ function toCsvCell(value: string | number) {
 function formatMetric(value: number | undefined) {
   return value === undefined
     ? '—'
-    : new Intl.NumberFormat('pt-AO', { maximumFractionDigits: 0 }).format(value);
+    : new Intl.NumberFormat('pt-AO', { maximumFractionDigits: 0 }).format(
+        value,
+      );
 }
 
 function getErrorMessage(error: unknown) {

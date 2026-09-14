@@ -1,5 +1,229 @@
 import { expect, test } from '@playwright/test';
 
+for (const width of [1440, 390]) {
+  test(`shared controls preserve older pages and editors at ${width}`, async ({
+    page,
+    context,
+  }) => {
+    await page.setViewportSize({ width, height: 800 });
+    const errors: string[] = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    for (const [path, title] of [
+      ['', 'Visão geral'],
+      ['analytics', 'Análise do desempenho'],
+      ['lojas', 'Visão geral'],
+      ['carrossel', 'Carrossel da Home'],
+      ['eventos', 'Eventos'],
+    ]) {
+      await page.goto(`/dashboard/${path}`);
+      await expect(
+        page.getByRole('heading', { name: title, exact: true }),
+      ).toBeVisible();
+      await expect(page.getByText(/^A carregar/)).toHaveCount(0);
+      await expect(
+        page.getByRole('alert').filter({ hasText: /.+/ }),
+      ).toHaveCount(0);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await page.screenshot({
+        path: `test-results/shadcn-${path || 'dashboard'}-${width}.png`,
+        fullPage: true,
+      });
+    }
+    await page.goto('/dashboard/lojas');
+    const invite = page.getByRole('button', { name: 'Convidar loja' });
+    await invite.click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toHaveAttribute('data-slot', 'dialog-content');
+    await dialog.getByLabel('Nome comercial').fill('Loja de teste');
+    await dialog.getByRole('button', { name: 'Criar loja' }).click();
+    await expect(dialog).toBeVisible();
+    expect(
+      await dialog
+        .locator('form')
+        .evaluate((form: HTMLFormElement) => form.checkValidity()),
+    ).toBe(false);
+    expect(
+      await dialog.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: `test-results/shadcn-loja-modal-${width}.png`,
+    });
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(invite).toBeFocused();
+    await page.goto('/dashboard/carrossel');
+    await page.getByRole('button', { name: 'Novo slide' }).click();
+    await dialog.getByLabel('Título interno').fill('Slide de teste');
+    await dialog.locator('input[type=file]').setInputFiles({
+      name: 'slide.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aL1sAAAAASUVORK5CYII=',
+        'base64',
+      ),
+    });
+    const preview = dialog.getByRole('img');
+    await expect(preview).toBeVisible();
+    expect((await preview.boundingBox())!.height).toBeLessThanOrEqual(282);
+    expect(
+      await preview.evaluate((img: HTMLImageElement) => img.naturalWidth),
+    ).toBeGreaterThan(0);
+    await dialog
+      .getByRole('button', { name: 'Publicar slide' })
+      .scrollIntoViewIfNeeded();
+    await expect(
+      dialog.getByRole('button', { name: 'Publicar slide' }),
+    ).toBeInViewport();
+    expect(
+      await dialog.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: `test-results/shadcn-carrossel-modal-${width}.png`,
+    });
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await context.clearCookies();
+    await page.goto('/login');
+    await expect(
+      page.getByRole('heading', { name: 'Painel de gestão' }),
+    ).toBeVisible();
+    await expect(page.getByLabel('Email', { exact: true })).toHaveAttribute(
+      'data-slot',
+      'input',
+    );
+    await page.getByRole('button', { name: 'Iniciar sessão' }).click();
+    await expect(page).toHaveURL(/\/login$/);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: `test-results/shadcn-login-${width}.png`,
+      fullPage: true,
+    });
+    expect(errors).toEqual([]);
+  });
+}
+
+test('shadcn tabs, tooltips and dialog keyboard focus', async ({ page }) => {
+  await page.goto('/dashboard/notificacoes');
+  const campaigns = page.getByRole('tab', { name: 'Campanhas', exact: true });
+  await campaigns.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(
+    page.getByRole('tab', { name: 'Destaques', exact: true }),
+  ).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tabpanel')).toContainText(
+    'Novidades de setembro',
+  );
+  await page.goto('/dashboard/configuracoes');
+  const edit = page.getByRole('button', { name: 'Editar fórmula global' });
+  await edit.hover();
+  await expect(page.getByRole('tooltip')).toContainText(
+    'Editar fórmula global',
+  );
+  await edit.click();
+  const dialog = page.getByRole('dialog');
+  await expect(
+    dialog.getByRole('heading', { name: 'Fórmula global' }),
+  ).toBeFocused();
+  await page.mouse.move(0, 0);
+  await expect(page.getByRole('tooltip')).toHaveCount(0);
+  for (let i = 0; i < 8; i += 1) {
+    await page.keyboard.press('Tab');
+    expect(
+      await dialog.evaluate((element) =>
+        element.contains(document.activeElement),
+      ),
+    ).toBe(true);
+  }
+  await dialog.getByLabel('AOA por ponto').focus();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(edit).toBeFocused();
+});
+
+test('a pending save cannot dismiss the shared modal', async ({ page }) => {
+  await page.goto('/dashboard/perfil');
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/api/backend/api/auth/profile', async (route) => {
+    if (route.request().method() !== 'PUT') return route.continue();
+    await pending;
+    await route.continue();
+  });
+  try {
+    await page.getByRole('button', { name: 'Editar dados pessoais' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Nome', { exact: true }).fill('Admin atualizado');
+    await dialog.getByRole('button', { name: 'Guardar perfil' }).click();
+    await expect(
+      dialog.getByRole('button', { name: 'Fechar', exact: true }),
+    ).toBeDisabled();
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeVisible();
+    release();
+    await expect(dialog).toHaveCount(0);
+    await expect(
+      page.getByText('Perfil atualizado.', { exact: true }),
+    ).toBeVisible();
+  } finally {
+    release();
+  }
+});
+
+test('merchant keeps the registered store and shared manual QR controls', async ({
+  page,
+  context,
+  playwright,
+}) => {
+  const api = await playwright.request.newContext({ ignoreHTTPSErrors: true });
+  await api.get('https://127.0.0.1:4443/__merchant');
+  await api.dispose();
+  await context.addCookies([
+    {
+      name: 'sf-backoffice-role',
+      value: 'STORE_USER',
+      domain: 'localhost',
+      path: '/',
+    },
+  ]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/lojista');
+  await expect(
+    page.getByRole('heading', { name: 'Registar compra' }),
+  ).toBeVisible();
+  await expect(page.getByRole('combobox')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Inserir código' }).click();
+  await expect(page.getByLabel('Código do QR')).toHaveAttribute(
+    'data-slot',
+    'textarea',
+  );
+  await expect(
+    page.getByRole('button', { name: 'Validar cliente' }),
+  ).toBeDisabled();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: 'test-results/shadcn-lojista-390.png',
+    fullPage: true,
+  });
+});
+
 test.beforeEach(async ({ context, playwright }) => {
   const api = await playwright.request.newContext({ ignoreHTTPSErrors: true });
   await api.get('https://127.0.0.1:4443/__reset');
@@ -166,6 +390,7 @@ test('invoices: preview, rejection reason and explicit approval', async ({
     )
     .toBeGreaterThan(0);
   await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('button', { name: 'Rejeitar', exact: true }).click();
   await page
     .getByRole('dialog')
@@ -259,16 +484,14 @@ test('small-screen modals keep controls reachable and image previews bounded', a
   await page.goto('/dashboard/recompensas');
   await page.getByRole('button', { name: 'Nova recompensa' }).click();
   const dialog = page.getByRole('dialog');
-  await dialog
-    .getByLabel('Imagem', { exact: true })
-    .setInputFiles({
-      name: 'preview.png',
-      mimeType: 'image/png',
-      buffer: Buffer.from(
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aL1sAAAAASUVORK5CYII=',
-        'base64',
-      ),
-    });
+  await dialog.getByLabel('Imagem', { exact: true }).setInputFiles({
+    name: 'preview.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aL1sAAAAASUVORK5CYII=',
+      'base64',
+    ),
+  });
   const preview = dialog.getByRole('img', {
     name: 'Pré-visualização da recompensa',
   });

@@ -42,28 +42,6 @@
   line-height: 18px;
 }
 
-.inviteButton {
-  display: inline-flex;
-  min-height: 42px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px solid #8b321f;
-  border-radius: 7px;
-  background: #8b321f;
-  color: #ffffff;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 18px;
-  padding: 0 20px;
-  white-space: nowrap;
-}
-
-.inviteButton:hover {
-  background: #6b2618;
-}
-
 .successNotice,
 .errorNotice {
   margin: -14px 0 0;
@@ -465,80 +443,6 @@
   font-weight: 500;
 }
 
-.modalBackdrop {
-  position: fixed;
-  z-index: 50;
-  inset: 0;
-  display: grid;
-  overflow-y: auto;
-  place-items: center;
-  background: rgba(35, 22, 17, 0.52);
-  padding: 28px;
-}
-
-.modal {
-  width: min(100%, 820px);
-  max-height: calc(100vh - 56px);
-  overflow: hidden;
-  border: 1px solid #d8c7c0;
-  border-radius: 8px;
-  background: #ffffff;
-  box-shadow: 0 22px 70px rgba(34, 20, 15, 0.3);
-}
-
-.modalHeader {
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) 36px;
-  align-items: center;
-  gap: 12px;
-  border-bottom: 1px solid #e2d5cf;
-  padding: 16px 18px;
-}
-
-.modalHeader h2,
-.modalHeader p {
-  margin: 0;
-}
-
-.modalHeader h2 {
-  color: #8b321f;
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 25px;
-}
-
-.modalHeader p {
-  margin-top: 2px;
-  color: #826b60;
-  font-size: 11px;
-  line-height: 15px;
-}
-
-.modalTitleIcon {
-  display: grid;
-  width: 36px;
-  height: 36px;
-  place-items: center;
-  border-radius: 6px;
-  background: #f3e3dc;
-  color: #8b321f;
-}
-
-.closeButton {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
-  color: #8b321f;
-}
-
-.closeButton:hover {
-  background: #f4e9e4;
-}
-
 .modalError {
   margin: 12px 18px 0;
   border: 1px solid rgba(180, 35, 24, 0.22);
@@ -548,11 +452,6 @@
   font-size: 12px;
   line-height: 18px;
   padding: 10px 12px;
-}
-
-.modalBody {
-  max-height: calc(100vh - 150px);
-  overflow-y: auto;
 }
 
 .modalBody :global(.store-media-preview) {
@@ -608,11 +507,6 @@
     max-width: 220px;
   }
 
-  .inviteButton {
-    min-height: 38px;
-    padding-inline: 13px;
-  }
-
   .filters {
     align-items: stretch;
     flex-direction: column;
@@ -642,21 +536,6 @@
     min-height: 450px;
   }
 
-  .modalBackdrop {
-    align-items: end;
-    padding: 0;
-  }
-
-  .modal {
-    width: 100%;
-    max-height: 94vh;
-    border-radius: 8px 8px 0 0;
-  }
-
-  .modalBody {
-    max-height: calc(94vh - 72px);
-  }
-
   .modalBody :global(.admin-form) {
     grid-template-columns: 1fr;
   }
@@ -679,29 +558,5 @@
     display: grid;
     width: 100%;
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .inviteButton {
-    width: 100%;
-  }
-
-  .modalHeader {
-    grid-template-columns: 32px minmax(0, 1fr) 34px;
-    gap: 8px;
-    padding: 14px;
-  }
-
-  .modalTitleIcon {
-    width: 32px;
-    height: 32px;
-  }
-
-  .modalHeader h2 {
-    font-size: 18px;
-    line-height: 22px;
-  }
-
-  .modalHeader p {
-    overflow-wrap: anywhere;
   }
 }

@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 
 import { daxline } from '@/components/font';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
-import './globals.css';
+import './shadcn.css';
 
 export const metadata: Metadata = {
   title: 'SF Admin | Shopping Fortaleza',
@@ -16,7 +17,9 @@ export default function RootLayout({
 }>) {
   return (
     <html className={daxline.variable} lang="pt-AO">
-      <body className={daxline.className}>{children}</body>
+      <body className={daxline.className}>
+        <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+      </body>
     </html>
   );
 }

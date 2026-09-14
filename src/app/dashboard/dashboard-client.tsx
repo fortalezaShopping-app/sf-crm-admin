@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
 import { useEffect, useState } from 'react';
 import { CalendarDays, Download } from 'lucide-react';
 import Link from 'next/link';
@@ -65,19 +66,27 @@ export function DashboardClient() {
         </div>
 
         <div className={styles.headingActions}>
-          <button className={styles.periodButton} type="button">
+          <Button
+            variant="plain"
+            size="plain"
+            className={styles.periodButton}
+            type="button"
+          >
             <CalendarDays aria-hidden size={17} strokeWidth={1.6} />
             Últimos 30 dias
-          </button>
-          <button
-            className={styles.exportButton}
+          </Button>
+          <Button
+            variant="default"
+
             disabled={!state.summary}
-            onClick={() => state.summary && exportDashboardReport(state.summary)}
+            onClick={() =>
+              state.summary && exportDashboardReport(state.summary)
+            }
             type="button"
           >
             <Download aria-hidden size={17} strokeWidth={1.7} />
             Exportar relatório
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -87,11 +96,16 @@ export function DashboardClient() {
         </p>
       ) : null}
 
-      <section className={styles.metricsGrid} aria-label="Indicadores principais">
+      <section
+        className={styles.metricsGrid}
+        aria-label="Indicadores principais"
+      >
         {metrics.map((metric) => (
           <article className={styles.metricCard} key={metric.label}>
             <span>{metric.label}</span>
-            <strong>{state.isLoading ? '...' : formatCount(metric.value ?? 0)}</strong>
+            <strong>
+              {state.isLoading ? '...' : formatCount(metric.value ?? 0)}
+            </strong>
           </article>
         ))}
       </section>
@@ -149,7 +163,9 @@ export function DashboardClient() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4}>Sem atividade registada nos últimos 30 dias.</td>
+                  <td colSpan={4}>
+                    Sem atividade registada nos últimos 30 dias.
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -177,16 +193,23 @@ function VolumeChart({
         <span>Últimos 30 dias</span>
       </header>
 
-      <div className={styles.barChart} aria-label="Volume de transações por período">
+      <div
+        className={styles.barChart}
+        aria-label="Volume de transações por período"
+      >
         {isLoading ? (
           <p className={styles.chartMessage}>A carregar...</p>
         ) : hasData ? (
           data.map((item) => (
             <div className={styles.barColumn} key={item.label}>
-              <span className={styles.barValue}>{formatCount(item.transactions)}</span>
+              <span className={styles.barValue}>
+                {formatCount(item.transactions)}
+              </span>
               <span
                 className={styles.bar}
-                style={{ height: `${Math.max(8, (item.transactions / maxValue) * 100)}%` }}
+                style={{
+                  height: `${Math.max(8, (item.transactions / maxValue) * 100)}%`,
+                }}
               />
               <span className={styles.barLabel}>{item.label}</span>
             </div>
@@ -237,9 +260,21 @@ function ReceiptChart({
             </span>
           </div>
           <div className={styles.legend}>
-            <LegendItem color="#2f8f57" label="Aprovados" value={data?.approved ?? 0} />
-            <LegendItem color="#e1b420" label="Pendentes" value={data?.pending ?? 0} />
-            <LegendItem color="#b42318" label="Rejeitados" value={data?.rejected ?? 0} />
+            <LegendItem
+              color="#2f8f57"
+              label="Aprovados"
+              value={data?.approved ?? 0}
+            />
+            <LegendItem
+              color="#e1b420"
+              label="Pendentes"
+              value={data?.pending ?? 0}
+            />
+            <LegendItem
+              color="#b42318"
+              label="Rejeitados"
+              value={data?.rejected ?? 0}
+            />
             {data?.other ? (
               <LegendItem color="#d8cbc5" label="Outros" value={data.other} />
             ) : null}
@@ -252,7 +287,15 @@ function ReceiptChart({
   );
 }
 
-function LegendItem({ color, label, value }: { color: string; label: string; value: number }) {
+function LegendItem({
+  color,
+  label,
+  value,
+}: {
+  color: string;
+  label: string;
+  value: number;
+}) {
   return (
     <span className={styles.legendItem}>
       <span className={styles.legendDot} style={{ background: color }} />
@@ -301,7 +344,9 @@ function percentage(value: number, total: number) {
 }
 
 function formatCount(value: number) {
-  return new Intl.NumberFormat('pt-AO', { maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat('pt-AO', { maximumFractionDigits: 0 }).format(
+    value,
+  );
 }
 
 function getErrorMessage(error: unknown) {

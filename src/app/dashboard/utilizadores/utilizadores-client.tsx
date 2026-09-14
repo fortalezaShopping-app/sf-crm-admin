@@ -1,5 +1,12 @@
 'use client';
 
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { NativeSelect } from '@/components/ui/native-select';
+import { IconButton } from '@/components/ui/icon-button';
+import { Badge } from '@/components/ui/badge';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   Ban,
@@ -160,10 +167,10 @@ export function UtilizadoresClient() {
               ]),
             ]}
           />
-          <button className={s.button} onClick={() => setEditor('new')}>
+          <Button variant="default" onClick={() => setEditor('new')}>
             <Plus size={16} />
             Novo utilizador
-          </button>
+          </Button>
         </div>
       </header>
       {error && <Notice tone="error">{error}</Notice>}
@@ -177,7 +184,7 @@ export function UtilizadoresClient() {
           <div className={s.panelHeader}>
             <label className={s.search}>
               <Search size={17} />
-              <input
+              <Input
                 aria-label="Pesquisar utilizadores"
                 placeholder="Pesquisar utilizadores"
                 value={query}
@@ -187,7 +194,7 @@ export function UtilizadoresClient() {
                 }}
               />
             </label>
-            <select
+            <NativeSelect
               className={s.select}
               aria-label="Filtrar por função"
               value={role}
@@ -202,16 +209,15 @@ export function UtilizadoresClient() {
                   {label}
                 </option>
               ))}
-            </select>
-            <button
-              className={s.iconButton}
+            </NativeSelect>
+            <IconButton
               title="Atualizar utilizadores"
               aria-label="Atualizar utilizadores"
               disabled={loading}
               onClick={refresh}
             >
               <RefreshCw size={16} />
-            </button>
+            </IconButton>
           </div>
           {loading ? (
             <EmptyState>A carregar utilizadores...</EmptyState>
@@ -235,7 +241,9 @@ export function UtilizadoresClient() {
                       className={selected?.id === u.id ? s.selected : undefined}
                     >
                       <td>
-                        <button
+                        <Button
+                          variant="plain"
+                          size="plain"
                           className={s.nameButton}
                           aria-pressed={selected?.id === u.id}
                           onClick={() => {
@@ -252,7 +260,7 @@ export function UtilizadoresClient() {
                             <strong>{u.nome || 'Sem nome'}</strong>
                             <small>{u.email}</small>
                           </span>
-                        </button>
+                        </Button>
                       </td>
                       <td>{u.telefone || '-'}</td>
                       <td>
@@ -286,80 +294,70 @@ export function UtilizadoresClient() {
                 <Avatar large name={selected.nome} src={selected.photoUrl} />
                 <h2>{selected.nome || 'Sem nome'}</h2>
                 <p>Membro desde {formatAdminDate(selected.createdAt)}</p>
-                <span className={s.badge}>
+                <Badge variant="secondary">
                   {(selected.roles ?? [selected.role])
                     .filter(Boolean)
                     .map((r) => roles[r!])
                     .join(', ') || 'Função não disponível'}
-                </span>
+                </Badge>
               </div>
               <div className={`${s.padding} ${s.stack}`}>
-                <div className={s.segments}>
-                  <button
-                    className={s.segment}
-                    aria-pressed={tab === 'details'}
-                    onClick={() => setTab('details')}
-                  >
-                    Detalhes
-                  </button>
-                  <button
-                    className={s.segment}
-                    aria-pressed={tab === 'history'}
-                    onClick={() => setTab('history')}
-                  >
-                    Histórico
-                  </button>
-                </div>
-                {tab === 'details' ? (
-                  <dl className={s.details}>
-                    <div>
-                      <dt>Email</dt>
-                      <dd>{selected.email || '-'}</dd>
-                    </div>
-                    <div>
-                      <dt>Telefone</dt>
-                      <dd>{selected.telefone || '-'}</dd>
-                    </div>
-                    <div>
-                      <dt>Último acesso</dt>
-                      <dd>{formatAdminDate(selected.ultimoLogin, true)}</dd>
-                    </div>
-                    <div>
-                      <dt>Estado</dt>
-                      <dd>
-                        <UserStatus user={selected} />
-                      </dd>
-                    </div>
-                  </dl>
-                ) : (
-                  <UserHistory user={selected} />
-                )}
+                <Tabs
+                  value={tab}
+                  onValueChange={(value) => setTab(value as typeof tab)}
+                >
+                  <TabsList aria-label="Dados do utilizador">
+                    <TabsTrigger value="details">Detalhes</TabsTrigger>
+                    <TabsTrigger value="history">Histórico</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="details">
+                    <dl className={s.details}>
+                      <div>
+                        <dt>Email</dt>
+                        <dd>{selected.email || '-'}</dd>
+                      </div>
+                      <div>
+                        <dt>Telefone</dt>
+                        <dd>{selected.telefone || '-'}</dd>
+                      </div>
+                      <div>
+                        <dt>Último acesso</dt>
+                        <dd>{formatAdminDate(selected.ultimoLogin, true)}</dd>
+                      </div>
+                      <div>
+                        <dt>Estado</dt>
+                        <dd>
+                          <UserStatus user={selected} />
+                        </dd>
+                      </div>
+                    </dl>
+                  </TabsContent>
+                  <TabsContent value="history">
+                    <UserHistory user={selected} />
+                  </TabsContent>
+                </Tabs>
                 <div className={s.actions}>
-                  <button
-                    className={s.secondary}
-                    onClick={() => setEditor(selected)}
-                  >
+                  <Button variant="outline" onClick={() => setEditor(selected)}>
                     <Pencil size={15} />
                     Editar
-                  </button>
-                  <button
-                    className={s.iconButton}
+                  </Button>
+                  <IconButton
                     title="Histórico da conta"
                     aria-label="Histórico da conta"
                     onClick={() => setShowLog(true)}
                   >
                     <History size={16} />
-                  </button>
-                  <button
-                    className={s.secondary}
+                  </IconButton>
+                  <Button
+                    variant="outline"
                     disabled
                     title="Ajustes de saldo ainda não disponíveis na API"
                   >
                     Ajustar saldo
-                  </button>
-                  <button
-                    className={
-                      selected.estado === 'ATIVO' ? s.danger : s.success
+                  </Button>
+                  <Button
+                    variant={
+                      selected.estado === 'ATIVO' ? 'destructive' : 'success'
                     }
                     disabled={!selected.id || selected.id === session?.id}
                     title={
@@ -378,7 +376,7 @@ export function UtilizadoresClient() {
                       <Check size={15} />
                     )}
                     {selected.estado === 'ATIVO' ? 'Desativar' : 'Ativar'}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </>
@@ -410,20 +408,16 @@ export function UtilizadoresClient() {
             </p>
             {actionError && <Notice tone="error">{actionError}</Notice>}
             <div className={s.footer}>
-              <button
-                className={s.secondary}
+              <Button
+                variant="outline"
                 disabled={busy}
                 onClick={() => setConfirm(null)}
               >
                 Cancelar
-              </button>
-              <button
-                className={s.button}
-                disabled={busy}
-                onClick={changeStatus}
-              >
+              </Button>
+              <Button variant="default" disabled={busy} onClick={changeStatus}>
                 {busy ? 'A atualizar...' : 'Confirmar'}
-              </button>
+              </Button>
             </div>
           </div>
         </Modal>
@@ -442,8 +436,8 @@ export function UtilizadoresClient() {
 
 function UserStatus({ user }: { user: Utilizador }) {
   return (
-    <span
-      className={s.badge}
+    <Badge
+      variant="secondary"
       data-tone={
         user.estado === 'ATIVO'
           ? 'success'
@@ -459,7 +453,7 @@ function UserStatus({ user }: { user: Utilizador }) {
           : user.estado === 'INATIVO'
             ? 'Inativo'
             : 'Indisponível'}
-    </span>
+    </Badge>
   );
 }
 function UserHistory({ user }: { user: Utilizador }) {
@@ -557,7 +551,7 @@ function UserEditor({
       <form className={s.form} onSubmit={submit}>
         <label>
           Nome
-          <input
+          <Input
             required
             maxLength={120}
             value={form.nome}
@@ -567,7 +561,7 @@ function UserEditor({
         <div className={s.detailGrid}>
           <label>
             Email
-            <input
+            <Input
               required
               type="email"
               value={form.email}
@@ -576,7 +570,7 @@ function UserEditor({
           </label>
           <label>
             Telefone
-            <input
+            <Input
               type="tel"
               value={form.telefone}
               onChange={(e) => field('telefone', e.target.value)}
@@ -585,7 +579,7 @@ function UserEditor({
         </div>
         <label>
           Função
-          <select
+          <NativeSelect
             value={form.role}
             disabled={!!user}
             onChange={(e) => field('role', e.target.value)}
@@ -597,13 +591,13 @@ function UserEditor({
                   {name}
                 </option>
               ))}
-          </select>
+          </NativeSelect>
         </label>
         {merchant && (
           <>
             <label>
               {user ? 'Associar a uma loja' : 'Loja de registo'}
-              <select
+              <NativeSelect
                 value={form.lojaId}
                 required={!user}
                 onChange={(e) => field('lojaId', e.target.value)}
@@ -616,7 +610,7 @@ function UserEditor({
                     {store.nome}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </label>
             {!stores.length && (
               <Notice>
@@ -626,7 +620,7 @@ function UserEditor({
             )}
             <label>
               Cargo
-              <input
+              <Input
                 value={form.cargo}
                 onChange={(e) => field('cargo', e.target.value)}
               />
@@ -636,7 +630,7 @@ function UserEditor({
         {!user && (
           <label>
             Palavra-passe
-            <input
+            <Input
               type="password"
               autoComplete="new-password"
               required
@@ -648,17 +642,17 @@ function UserEditor({
         )}
         {error && <Notice tone="error">{error}</Notice>}
         <div className={s.footer}>
-          <button
+          <Button
             type="button"
-            className={s.secondary}
+            variant="outline"
             disabled={busy}
             onClick={onClose}
           >
             Cancelar
-          </button>
-          <button className={s.button} disabled={busy}>
+          </Button>
+          <Button variant="default" disabled={busy}>
             {busy ? 'A guardar...' : 'Guardar utilizador'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

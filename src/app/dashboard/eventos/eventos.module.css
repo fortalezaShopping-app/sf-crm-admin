@@ -40,26 +40,6 @@
   line-height: 18px;
 }
 
-.createButton {
-  display: inline-flex;
-  min-height: 42px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px solid var(--primary);
-  border-radius: 7px;
-  background: var(--primary);
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 500;
-  padding: 0 20px;
-  white-space: nowrap;
-}
-
-.createButton:hover {
-  background: var(--primary-pressed);
-}
-
 .successNotice,
 .errorNotice {
   margin: -14px 0 0;
@@ -535,11 +515,6 @@
     line-height: 34px;
   }
 
-  .createButton {
-    min-height: 38px;
-    padding-inline: 13px;
-  }
-
   .filters {
     align-items: stretch;
     flex-direction: column;
@@ -600,10 +575,6 @@
     display: grid;
     width: 100%;
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .createButton {
-    width: 100%;
   }
 
   .modalHeader {

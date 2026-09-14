@@ -117,6 +117,10 @@ const server = https.createServer(
       return json({ ok: true });
     }
     if (path === '/__requests') return json(requests);
+    if (path === '/__merchant') {
+      profile = { ...profile, roles: ['STORE_USER'], storeId: 1 };
+      return json({ ok: true });
+    }
     requests.push({ path, method: req.method, body });
     if (path === '/api/auth/profile') {
       if (req.method === 'PUT') profile = { ...profile, ...body };
@@ -147,6 +151,11 @@ const server = https.createServer(
       return json(user);
     }
     if (/^\/api\/admin\/stores\/\d+\/users$/.test(path)) return json({}, 204);
+    if (path === '/api/admin/events') return page([]);
+    if (path === '/api/admin/carousel-slides') return page([]);
+    if (path === '/api/admin/loyalty/transactions') return page([]);
+    if (path === '/api/public/stores/1')
+      return json({ id: 1, name: 'Centro Óptico', status: 'ACTIVE' });
     if (path === '/api/admin/stores')
       return page([
         { id: 1, name: 'Centro Óptico', status: 'ACTIVE' },
@@ -247,6 +256,7 @@ server.listen(4443, '127.0.0.1', () => {
       stdio: 'inherit',
       env: {
         ...process.env,
+        NEXT_DIST_DIR: '.next-e2e',
         NEXT_PUBLIC_API_URL: 'https://127.0.0.1:4443',
         NODE_EXTRA_CA_CERTS: cert,
       },

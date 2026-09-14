@@ -1,5 +1,11 @@
 'use client';
 
+import { Modal } from '@/components/admin/Workspace';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { NativeSelect } from '@/components/ui/native-select';
+import { Textarea } from '@/components/ui/textarea';
 import {
   type FormEvent,
   useCallback,
@@ -10,14 +16,12 @@ import {
 } from 'react';
 import {
   Ban,
-  Building2,
   CircleCheck,
   FilePlus2,
   Pencil,
   Plus,
   Save,
   Search,
-  Store,
   X,
 } from 'lucide-react';
 
@@ -111,7 +115,9 @@ export function LojasClient() {
   const [logo, setLogo] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [invoiceTemplate, setInvoiceTemplate] = useState<File | null>(null);
-  const [invoiceTemplatePreviewUrl, setInvoiceTemplatePreviewUrl] = useState<string | null>(null);
+  const [invoiceTemplatePreviewUrl, setInvoiceTemplatePreviewUrl] = useState<
+    string | null
+  >(null);
   const [mediaVersion, setMediaVersion] = useState(0);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -120,7 +126,9 @@ export function LojasClient() {
   const [message, setMessage] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const { deferredQuery, query, setQuery } = useAdminSearchQuery();
-  const [selectedStoreIds, setSelectedStoreIds] = useState<Set<number>>(new Set());
+  const [selectedStoreIds, setSelectedStoreIds] = useState<Set<number>>(
+    new Set(),
+  );
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const formRef = useRef<HTMLFormElement>(null);
   const imagePreviewRef = useRef<string | null>(null);
@@ -164,28 +172,6 @@ export function LojasClient() {
     [],
   );
 
-  useEffect(() => {
-    if (!isEditorOpen) {
-      return;
-    }
-
-    const previousOverflow = document.body.style.overflow;
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !isSubmitting) {
-        setIsEditorOpen(false);
-      }
-    }
-
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isEditorOpen, isSubmitting]);
-
   const categoryOptions = useMemo(
     () =>
       Array.from(
@@ -200,26 +186,28 @@ export function LojasClient() {
   const filteredLojas = useMemo(() => {
     return lojas.filter((loja) => {
       const matchesQuery = matchesSearchQuery(deferredQuery, [
-          loja.nome,
-          loja.razaoSocial,
-          loja.nif,
-          loja.categoria,
-          loja.piso,
-          loja.telefone,
-          loja.email,
-          loja.endereco,
-          loja.descricao,
-          loja.estado,
-        ]);
+        loja.nome,
+        loja.razaoSocial,
+        loja.nif,
+        loja.categoria,
+        loja.piso,
+        loja.telefone,
+        loja.email,
+        loja.endereco,
+        loja.descricao,
+        loja.estado,
+      ]);
 
       return (
-        matchesQuery &&
-        (statusFilter === 'all' || loja.estado === statusFilter)
+        matchesQuery && (statusFilter === 'all' || loja.estado === statusFilter)
       );
     });
   }, [deferredQuery, lojas, statusFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredLojas.length / ITEMS_PER_PAGE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredLojas.length / ITEMS_PER_PAGE),
+  );
   const visiblePage = Math.min(page, totalPages - 1);
   const visibleLojas = filteredLojas.slice(
     visiblePage * ITEMS_PER_PAGE,
@@ -388,7 +376,10 @@ export function LojasClient() {
   }
 
   async function handleDeactivate(loja: Loja) {
-    if (!loja.id || !window.confirm(`Desativar a loja ${loja.nome ?? loja.id}?`)) {
+    if (
+      !loja.id ||
+      !window.confirm(`Desativar a loja ${loja.nome ?? loja.id}?`)
+    ) {
       return;
     }
 
@@ -433,15 +424,19 @@ export function LojasClient() {
           <p>Resumo de operações e performance do programa de fidelidade</p>
         </div>
 
-        <button className={styles.inviteButton} onClick={openCreateStore} type="button">
+        <Button variant="default" onClick={openCreateStore} type="button">
           <FilePlus2 aria-hidden size={17} strokeWidth={1.7} />
           Convidar loja
-        </button>
+        </Button>
       </header>
 
       {message && !isEditorOpen ? (
         <p
-          className={message.includes('sucesso') ? styles.successNotice : styles.errorNotice}
+          className={
+            message.includes('sucesso')
+              ? styles.successNotice
+              : styles.errorNotice
+          }
           role={message.includes('sucesso') ? 'status' : 'alert'}
         >
           {message}
@@ -450,7 +445,10 @@ export function LojasClient() {
 
       <section className={styles.tableCard}>
         <div className={styles.filters}>
-          <div aria-label="Filtrar lojas por estado" className={styles.statusTabs}>
+          <div
+            aria-label="Filtrar lojas por estado"
+            className={styles.statusTabs}
+          >
             {(
               [
                 ['all', 'Todos'],
@@ -459,25 +457,35 @@ export function LojasClient() {
                 ['INATIVA', 'Inativos'],
               ] as const
             ).map(([value, label]) => (
-              <button
+              <Button
+                variant="plain"
+                size="plain"
                 aria-pressed={statusFilter === value}
-                className={statusFilter === value ? styles.statusTabActive : styles.statusTab}
+                className={
+                  statusFilter === value
+                    ? styles.statusTabActive
+                    : styles.statusTab
+                }
                 key={value}
                 onClick={() => updateFilters(() => setStatusFilter(value))}
                 type="button"
               >
                 {label}
-                {value === 'PENDENTE' ? <span aria-hidden className={styles.pendingDot} /> : null}
-              </button>
+                {value === 'PENDENTE' ? (
+                  <span aria-hidden className={styles.pendingDot} />
+                ) : null}
+              </Button>
             ))}
           </div>
 
           <label className={styles.searchField}>
             <Search aria-hidden size={14} strokeWidth={1.7} />
-            <input
+            <Input
               aria-label="Pesquisar lojas"
               autoComplete="off"
-              onChange={(event) => updateFilters(() => setQuery(event.target.value))}
+              onChange={(event) =>
+                updateFilters(() => setQuery(event.target.value))
+              }
               placeholder="Pesquisar lojas"
               spellCheck={false}
               type="search"
@@ -511,13 +519,19 @@ export function LojasClient() {
               {visibleLojas.length > 0 ? (
                 visibleLojas.map((loja) => (
                   <tr
-                    className={loja.id && selectedStoreIds.has(loja.id) ? styles.selectedRow : undefined}
+                    className={
+                      loja.id && selectedStoreIds.has(loja.id)
+                        ? styles.selectedRow
+                        : undefined
+                    }
                     key={loja.id ?? loja.nome}
                   >
                     <td className={styles.checkboxColumn}>
                       <input
                         aria-label={`Selecionar ${loja.nome ?? 'loja'}`}
-                        checked={loja.id ? selectedStoreIds.has(loja.id) : false}
+                        checked={
+                          loja.id ? selectedStoreIds.has(loja.id) : false
+                        }
                         disabled={!loja.id}
                         onChange={() => loja.id && toggleStore(loja.id)}
                         type="checkbox"
@@ -547,7 +561,10 @@ export function LojasClient() {
                       {loja.id && loja.invoiceTemplateUrl ? (
                         <a
                           className={styles.templateLink}
-                          href={getLojaInvoiceTemplatePath(loja.id, mediaVersion)}
+                          href={getLojaInvoiceTemplatePath(
+                            loja.id,
+                            mediaVersion,
+                          )}
                           rel="noreferrer"
                           target="_blank"
                         >
@@ -558,7 +575,9 @@ export function LojasClient() {
                       )}
                     </td>
                     <td>
-                      <button
+                      <Button
+                        variant="plain"
+                        size="plain"
                         className={styles.detailAction}
                         disabled={!loja.id || actionId === `edit-${loja.id}`}
                         onClick={() => void startEditing(loja)}
@@ -566,39 +585,45 @@ export function LojasClient() {
                         type="button"
                       >
                         Ver detalhes
-                      </button>
+                      </Button>
                     </td>
                     <td>
                       <span className={styles.actions}>
-                        <button
+                        <Button
                           disabled={!loja.id || actionId === `edit-${loja.id}`}
                           onClick={() => void startEditing(loja)}
                           type="button"
                         >
                           <Pencil aria-hidden size={12} />
                           Editar
-                        </button>
+                        </Button>
                         {loja.estado === 'ATIVA' ? (
-                          <button
+                          <Button
+                            variant="plain"
+                            size="plain"
                             className={styles.dangerAction}
-                            disabled={!loja.id || actionId === `deactivate-${loja.id}`}
+                            disabled={
+                              !loja.id || actionId === `deactivate-${loja.id}`
+                            }
                             onClick={() => void handleDeactivate(loja)}
                             title="Desativar loja"
                             type="button"
                           >
                             <Ban aria-hidden size={12} />
                             Desativar
-                          </button>
+                          </Button>
                         ) : (
-                          <button
-                            disabled={!loja.id || actionId === `activate-${loja.id}`}
+                          <Button
+                            disabled={
+                              !loja.id || actionId === `activate-${loja.id}`
+                            }
                             onClick={() => void handleActivate(loja)}
                             title="Ativar loja"
                             type="button"
                           >
                             <CircleCheck aria-hidden size={12} />
                             Ativar
-                          </button>
+                          </Button>
                         )}
                       </span>
                     </td>
@@ -607,7 +632,9 @@ export function LojasClient() {
               ) : (
                 <tr>
                   <td className={styles.emptyState} colSpan={7}>
-                    {isLoading ? 'A carregar lojas...' : 'Nenhuma loja corresponde aos filtros.'}
+                    {isLoading
+                      ? 'A carregar lojas...'
+                      : 'Nenhuma loja corresponde aos filtros.'}
                   </td>
                 </tr>
               )}
@@ -627,322 +654,334 @@ export function LojasClient() {
       </section>
 
       {isEditorOpen ? (
-        <div
-          className={styles.modalBackdrop}
-          onMouseDown={(event) => {
-            if (event.currentTarget === event.target && !isSubmitting) {
-              resetForm();
-            }
-          }}
-          role="presentation"
+        <Modal
+          title={editingStoreId ? 'Editar loja' : 'Convidar loja'}
+          onClose={resetForm}
+          busy={isSubmitting}
+          wide
         >
-          <article
-            aria-labelledby="store-editor-title"
-            aria-modal="true"
-            className={styles.modal}
-            role="dialog"
-          >
-            <header className={styles.modalHeader}>
-              <span className={styles.modalTitleIcon}>
-                {editingStoreId ? <Building2 aria-hidden size={19} /> : <Store aria-hidden size={19} />}
-              </span>
-              <div>
-                <h2 id="store-editor-title">
-                  {editingStoreId ? 'Editar loja' : 'Convidar loja'}
-                </h2>
-                <p>{editingStoreId ? `Registo #${editingStoreId}` : 'Novo registo comercial'}</p>
-              </div>
-              <button
-                aria-label="Fechar formulário"
-                className={styles.closeButton}
-                disabled={isSubmitting}
-                onClick={resetForm}
-                type="button"
-              >
-                <X aria-hidden size={19} />
-              </button>
-            </header>
+          {message ? (
+            <p className={styles.modalError} role="alert">
+              {message}
+            </p>
+          ) : null}
 
-            {message ? (
-              <p className={styles.modalError} role="alert">
-                {message}
-              </p>
-            ) : null}
+          <div className={styles.modalBody}>
+            <div className="store-media-preview">
+              <figure>
+                <StoreImage
+                  id={editingStoreId ?? undefined}
+                  kind="image"
+                  name={form.nome}
+                  previewUrl={imagePreviewUrl}
+                  size="form"
+                  version={mediaVersion}
+                />
+                <figcaption>Imagem principal</figcaption>
+              </figure>
+              <figure>
+                <StoreImage
+                  id={editingStoreId ?? undefined}
+                  kind="logo"
+                  name={form.nome}
+                  previewUrl={logoPreviewUrl}
+                  size="form"
+                  version={mediaVersion}
+                />
+                <figcaption>Logotipo</figcaption>
+              </figure>
+              <figure>
+                <StoreImage
+                  available={Boolean(
+                    editingStoreId &&
+                    lojas.find((loja) => loja.id === editingStoreId)
+                      ?.invoiceTemplateUrl,
+                  )}
+                  id={editingStoreId ?? undefined}
+                  kind="invoice-template"
+                  name={form.nome}
+                  previewUrl={invoiceTemplatePreviewUrl}
+                  size="form"
+                  version={mediaVersion}
+                />
+                <figcaption>Modelo oficial de fatura</figcaption>
+              </figure>
+            </div>
 
-            <div className={styles.modalBody}>
-              <div className="store-media-preview">
-                <figure>
-                  <StoreImage
-                    id={editingStoreId ?? undefined}
-                    kind="image"
-                    name={form.nome}
-                    previewUrl={imagePreviewUrl}
-                    size="form"
-                    version={mediaVersion}
-                  />
-                  <figcaption>Imagem principal</figcaption>
-                </figure>
-                <figure>
-                  <StoreImage
-                    id={editingStoreId ?? undefined}
-                    kind="logo"
-                    name={form.nome}
-                    previewUrl={logoPreviewUrl}
-                    size="form"
-                    version={mediaVersion}
-                  />
-                  <figcaption>Logotipo</figcaption>
-                </figure>
-                <figure>
-                  <StoreImage
-                    available={Boolean(
-                      editingStoreId &&
-                        lojas.find((loja) => loja.id === editingStoreId)?.invoiceTemplateUrl
-                    )}
-                    id={editingStoreId ?? undefined}
-                    kind="invoice-template"
-                    name={form.nome}
-                    previewUrl={invoiceTemplatePreviewUrl}
-                    size="form"
-                    version={mediaVersion}
-                  />
-                  <figcaption>Modelo oficial de fatura</figcaption>
-                </figure>
-              </div>
+            <form className="admin-form" onSubmit={handleSubmit} ref={formRef}>
+              <div className="form-section-heading">Identificação</div>
 
-              <form className="admin-form" onSubmit={handleSubmit} ref={formRef}>
-            <div className="form-section-heading">Identificação</div>
-
-            <label>
-              Nome comercial
-              <input
-                maxLength={200}
-                onChange={(event) => setForm({ ...form, nome: event.target.value })}
-                required
-                value={form.nome}
-              />
-            </label>
-
-            <label>
-              Razão social
-              <input
-                maxLength={200}
-                onChange={(event) => setForm({ ...form, razaoSocial: event.target.value })}
-                required
-                value={form.razaoSocial}
-              />
-            </label>
-
-            <div className="form-row">
               <label>
-                NIF
-                <input
-                  inputMode="numeric"
-                  maxLength={15}
+                Nome comercial
+                <Input
+                  maxLength={200}
                   onChange={(event) =>
-                    setForm({ ...form, nif: event.target.value.replace(/\D/g, '') })
+                    setForm({ ...form, nome: event.target.value })
                   }
-                  pattern="[0-9]{9,15}"
-                  placeholder="9 a 15 digitos"
                   required
-                  value={form.nif}
+                  value={form.nome}
                 />
               </label>
 
               <label>
-                Categoria
-                <input
-                  list="store-categories"
-                  maxLength={120}
-                  onChange={(event) => setForm({ ...form, categoria: event.target.value })}
-                  required
-                  value={form.categoria}
-                />
-                <datalist id="store-categories">
-                  {categoryOptions.map((category) => (
-                    <option key={category} value={category} />
-                  ))}
-                </datalist>
-              </label>
-            </div>
-
-            <div className="form-row">
-              <label>
-                Piso
-                <select
+                Razão social
+                <Input
+                  maxLength={200}
                   onChange={(event) =>
-                    setForm({ ...form, piso: event.target.value as LojaFloor })
+                    setForm({ ...form, razaoSocial: event.target.value })
                   }
-                  value={form.piso}
-                >
-                  {floorOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Horário
-                <input
-                  maxLength={120}
-                  onChange={(event) => setForm({ ...form, horario: event.target.value })}
-                  placeholder="08:00 - 22:00"
                   required
-                  value={form.horario}
+                  value={form.razaoSocial}
                 />
               </label>
-            </div>
 
-            <div className="form-section-heading">Contacto</div>
+              <div className="form-row">
+                <label>
+                  NIF
+                  <Input
+                    inputMode="numeric"
+                    maxLength={15}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        nif: event.target.value.replace(/\D/g, ''),
+                      })
+                    }
+                    pattern="[0-9]{9,15}"
+                    placeholder="9 a 15 digitos"
+                    required
+                    value={form.nif}
+                  />
+                </label>
 
-            <div className="form-row">
+                <label>
+                  Categoria
+                  <Input
+                    list="store-categories"
+                    maxLength={120}
+                    onChange={(event) =>
+                      setForm({ ...form, categoria: event.target.value })
+                    }
+                    required
+                    value={form.categoria}
+                  />
+                  <datalist id="store-categories">
+                    {categoryOptions.map((category) => (
+                      <option key={category} value={category} />
+                    ))}
+                  </datalist>
+                </label>
+              </div>
+
+              <div className="form-row">
+                <label>
+                  Piso
+                  <NativeSelect
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        piso: event.target.value as LojaFloor,
+                      })
+                    }
+                    value={form.piso}
+                  >
+                    {floorOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </label>
+
+                <label>
+                  Horário
+                  <Input
+                    maxLength={120}
+                    onChange={(event) =>
+                      setForm({ ...form, horario: event.target.value })
+                    }
+                    placeholder="08:00 - 22:00"
+                    required
+                    value={form.horario}
+                  />
+                </label>
+              </div>
+
+              <div className="form-section-heading">Contacto</div>
+
+              <div className="form-row">
+                <label>
+                  Telefone
+                  <Input
+                    maxLength={30}
+                    onChange={(event) =>
+                      setForm({ ...form, telefone: event.target.value })
+                    }
+                    required
+                    value={form.telefone}
+                  />
+                </label>
+
+                <label>
+                  Email
+                  <Input
+                    maxLength={150}
+                    onChange={(event) =>
+                      setForm({ ...form, email: event.target.value })
+                    }
+                    type="email"
+                    value={form.email}
+                  />
+                </label>
+              </div>
+
               <label>
-                Telefone
-                <input
-                  maxLength={30}
-                  onChange={(event) => setForm({ ...form, telefone: event.target.value })}
-                  required
-                  value={form.telefone}
+                Endereço
+                <Input
+                  maxLength={500}
+                  onChange={(event) =>
+                    setForm({ ...form, endereco: event.target.value })
+                  }
+                  value={form.endereco}
                 />
               </label>
 
               <label>
-                Email
-                <input
-                  maxLength={150}
-                  onChange={(event) => setForm({ ...form, email: event.target.value })}
-                  type="email"
-                  value={form.email}
+                Descrição
+                <Textarea
+                  maxLength={1000}
+                  onChange={(event) =>
+                    setForm({ ...form, descricao: event.target.value })
+                  }
+                  rows={4}
+                  value={form.descricao}
                 />
               </label>
-            </div>
 
-            <label>
-              Endereço
-              <input
-                maxLength={500}
-                onChange={(event) => setForm({ ...form, endereco: event.target.value })}
-                value={form.endereco}
-              />
-            </label>
+              <div className="form-section-heading">Presença digital</div>
 
-            <label>
-              Descrição
-              <textarea
-                maxLength={1000}
-                onChange={(event) => setForm({ ...form, descricao: event.target.value })}
-                rows={4}
-                value={form.descricao}
-              />
-            </label>
+              <label>
+                Instagram
+                <Input
+                  maxLength={500}
+                  onChange={(event) =>
+                    setForm({ ...form, instagramUrl: event.target.value })
+                  }
+                  placeholder="https://instagram.com/..."
+                  type="url"
+                  value={form.instagramUrl}
+                />
+              </label>
 
-            <div className="form-section-heading">Presença digital</div>
+              <label>
+                Facebook
+                <Input
+                  maxLength={500}
+                  onChange={(event) =>
+                    setForm({ ...form, facebookUrl: event.target.value })
+                  }
+                  placeholder="https://facebook.com/..."
+                  type="url"
+                  value={form.facebookUrl}
+                />
+              </label>
 
-            <label>
-              Instagram
-              <input
-                maxLength={500}
-                onChange={(event) => setForm({ ...form, instagramUrl: event.target.value })}
-                placeholder="https://instagram.com/..."
-                type="url"
-                value={form.instagramUrl}
-              />
-            </label>
+              <label>
+                Site ou fonte
+                <Input
+                  maxLength={500}
+                  onChange={(event) =>
+                    setForm({ ...form, sourceUrl: event.target.value })
+                  }
+                  placeholder="https://..."
+                  type="url"
+                  value={form.sourceUrl}
+                />
+              </label>
 
-            <label>
-              Facebook
-              <input
-                maxLength={500}
-                onChange={(event) => setForm({ ...form, facebookUrl: event.target.value })}
-                placeholder="https://facebook.com/..."
-                type="url"
-                value={form.facebookUrl}
-              />
-            </label>
+              <div className="form-section-heading">Imagens</div>
 
-            <label>
-              Site ou fonte
-              <input
-                maxLength={500}
-                onChange={(event) => setForm({ ...form, sourceUrl: event.target.value })}
-                placeholder="https://..."
-                type="url"
-                value={form.sourceUrl}
-              />
-            </label>
+              <label>
+                {editingStoreId
+                  ? 'Substituir imagem principal'
+                  : 'Imagem principal'}
+                <Input
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(event) =>
+                    setImageFile(event.target.files?.[0] ?? null)
+                  }
+                  required={!editingStoreId}
+                  type="file"
+                />
+                <span className="form-hint">
+                  {image?.name ??
+                    (editingStoreId
+                      ? 'Mantenha vazio para preservar a imagem atual.'
+                      : '')}
+                </span>
+              </label>
 
-            <div className="form-section-heading">Imagens</div>
+              <label>
+                {editingStoreId ? 'Substituir logotipo' : 'Logotipo'}
+                <Input
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(event) =>
+                    setLogoFile(event.target.files?.[0] ?? null)
+                  }
+                  type="file"
+                />
+                <span className="form-hint">
+                  {logo?.name ??
+                    (editingStoreId
+                      ? 'Mantenha vazio para preservar o logotipo atual.'
+                      : 'Opcional.')}
+                </span>
+              </label>
 
-            <label>
-              {editingStoreId ? 'Substituir imagem principal' : 'Imagem principal'}
-              <input
-                accept="image/jpeg,image/png,image/webp"
-                onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
-                required={!editingStoreId}
-                type="file"
-              />
-              <span className="form-hint">
-                {image?.name ??
-                  (editingStoreId ? 'Mantenha vazio para preservar a imagem atual.' : '')}
-              </span>
-            </label>
+              <label>
+                {editingStoreId
+                  ? 'Substituir modelo oficial de fatura'
+                  : 'Modelo oficial de fatura'}
+                <Input
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(event) =>
+                    setInvoiceTemplateFile(event.target.files?.[0] ?? null)
+                  }
+                  required={!editingStoreId}
+                  type="file"
+                />
+                <span className="form-hint">
+                  {invoiceTemplate?.name ??
+                    (editingStoreId
+                      ? 'Mantenha vazio para preservar o modelo atual.'
+                      : 'Obrigatório para validar faturas desta loja.')}
+                </span>
+              </label>
 
-            <label>
-              {editingStoreId ? 'Substituir logotipo' : 'Logotipo'}
-              <input
-                accept="image/jpeg,image/png,image/webp"
-                onChange={(event) => setLogoFile(event.target.files?.[0] ?? null)}
-                type="file"
-              />
-              <span className="form-hint">
-                {logo?.name ??
-                  (editingStoreId ? 'Mantenha vazio para preservar o logotipo atual.' : 'Opcional.')}
-              </span>
-            </label>
+              <div className="form-actions">
+                <Button variant="default" disabled={isSubmitting} type="submit">
+                  {editingStoreId ? (
+                    <Save aria-hidden size={16} />
+                  ) : (
+                    <Plus aria-hidden size={16} />
+                  )}
+                  {isSubmitting
+                    ? 'A guardar...'
+                    : editingStoreId
+                      ? 'Guardar alterações'
+                      : 'Criar loja'}
+                </Button>
 
-            <label>
-              {editingStoreId
-                ? 'Substituir modelo oficial de fatura'
-                : 'Modelo oficial de fatura'}
-              <input
-                accept="image/jpeg,image/png,image/webp"
-                onChange={(event) =>
-                  setInvoiceTemplateFile(event.target.files?.[0] ?? null)
-                }
-                required={!editingStoreId}
-                type="file"
-              />
-              <span className="form-hint">
-                {invoiceTemplate?.name ??
-                  (editingStoreId
-                    ? 'Mantenha vazio para preservar o modelo atual.'
-                    : 'Obrigatório para validar faturas desta loja.')}
-              </span>
-            </label>
-
-            <div className="form-actions">
-              <button className="primary-button" disabled={isSubmitting} type="submit">
-                {editingStoreId ? <Save aria-hidden size={16} /> : <Plus aria-hidden size={16} />}
-                {isSubmitting
-                  ? 'A guardar...'
-                  : editingStoreId
-                    ? 'Guardar alterações'
-                    : 'Criar loja'}
-              </button>
-
-              {editingStoreId ? (
-                <button className="ghost-button" onClick={resetForm} type="button">
-                  <X aria-hidden size={16} />
-                  Cancelar
-                </button>
-              ) : null}
-            </div>
-              </form>
-            </div>
-          </article>
-        </div>
+                {editingStoreId ? (
+                  <Button variant="outline" onClick={resetForm} type="button">
+                    <X aria-hidden size={16} />
+                    Cancelar
+                  </Button>
+                ) : null}
+              </div>
+            </form>
+          </div>
+        </Modal>
       ) : null}
     </div>
   );

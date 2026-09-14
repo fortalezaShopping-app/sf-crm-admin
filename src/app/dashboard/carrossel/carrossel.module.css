@@ -38,39 +38,6 @@
   line-height: 18px;
 }
 
-.createButton,
-.primaryButton,
-.secondaryButton {
-  display: inline-flex;
-  min-height: 42px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border-radius: 7px;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  padding: 0 20px;
-}
-
-.createButton,
-.primaryButton {
-  border: 1px solid var(--primary);
-  background: var(--primary);
-  color: #fff;
-}
-
-.createButton:hover,
-.primaryButton:hover {
-  background: var(--primary-pressed);
-}
-
-.secondaryButton {
-  border: 1px solid #c8aaa0;
-  background: #fff;
-  color: var(--primary);
-}
-
 .successNotice,
 .errorNotice,
 .modalError {
@@ -298,88 +265,15 @@
   font-size: 11px;
 }
 
-.modalBackdrop {
-  position: fixed;
-  z-index: 50;
-  inset: 0;
-  display: grid;
-  overflow-y: auto;
-  place-items: center;
-  background: rgba(35, 22, 17, 0.52);
-  padding: 28px;
-}
-
-.modal {
-  width: min(100%, 780px);
-  max-height: calc(100vh - 56px);
-  overflow: hidden;
-  border: 1px solid #d8c7c0;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 22px 70px rgba(34, 20, 15, 0.3);
-}
-
-.modalHeader {
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) 36px;
-  align-items: center;
-  gap: 12px;
-  border-bottom: 1px solid #e2d5cf;
-  padding: 16px 18px;
-}
-
-.modalHeader h2,
-.modalHeader p {
-  margin: 0;
-}
-
-.modalHeader h2 {
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.modalHeader p {
-  margin-top: 2px;
-  color: var(--muted-text);
-  font-size: 11px;
-}
-
-.modalTitleIcon,
-.closeButton {
-  display: grid;
-  width: 36px;
-  height: 36px;
-  place-items: center;
-  border-radius: 6px;
-}
-
-.modalTitleIcon {
-  background: #f3e3dc;
-}
-
-.closeButton {
-  border: 0;
-  background: transparent;
-  color: var(--primary);
-}
-
-.closeButton:hover {
-  background: #f4e9e4;
-}
-
 .modalError {
   margin: 12px 18px 0;
 }
 
 .modalBody {
   display: grid;
-  max-height: calc(100vh - 150px);
   grid-template-columns: 218px minmax(300px, 1fr);
   align-items: start;
   gap: 24px;
-  overflow-y: auto;
-  background: #fbf7f5;
-  padding: 20px;
 }
 
 .previewPanel {
@@ -388,10 +282,7 @@
   justify-items: center;
   gap: 12px;
   margin: 0;
-  border: 1px solid #e0d2cc;
-  border-radius: 9px;
-  background: #fff;
-  padding: 14px;
+  padding: 0;
 }
 
 .previewPanel figcaption {
@@ -449,36 +340,14 @@
   display: grid;
   align-content: start;
   gap: 16px;
-  border: 1px solid #e0d2cc;
-  border-radius: 9px;
-  background: #fff;
-  padding: 18px;
 }
 
 .form label {
   display: grid;
   gap: 7px;
   color: var(--primary);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
-}
-
-.form input {
-  width: 100%;
-  min-height: 42px;
-  border: 1px solid #b98273;
-  border-radius: 6px;
-  outline: 0;
-  background: #fff;
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
-  padding: 9px 11px;
-}
-
-.form input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(139, 50, 31, 0.1);
 }
 
 .fileLabel {
@@ -611,19 +480,7 @@
     padding: 16px;
   }
 
-  .modalBackdrop {
-    align-items: end;
-    padding: 0;
-  }
-
-  .modal {
-    width: 100%;
-    max-height: 94vh;
-    border-radius: 8px 8px 0 0;
-  }
-
   .modalBody {
-    max-height: calc(94vh - 72px);
     grid-template-columns: 1fr;
   }
 
@@ -637,8 +494,7 @@
 }
 
 @media (max-width: 470px) {
-  .heading,
-  .createButton {
+  .heading {
     width: 100%;
   }
 

@@ -168,6 +168,7 @@
 }
 
 .searchShell input {
+  box-shadow: none;
   width: 100%;
   min-width: 0;
   border: 0;

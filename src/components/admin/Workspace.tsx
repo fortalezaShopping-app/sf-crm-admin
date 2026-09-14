@@ -1,9 +1,13 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import { Download, Inbox, X } from 'lucide-react';
 import { downloadCsv } from '@/lib/admin-models';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import styles from './Workspace.module.css';
 
 export function Modal({
@@ -11,51 +15,58 @@ export function Modal({
   children,
   onClose,
   busy = false,
+  wide = false,
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   busy?: boolean;
+  wide?: boolean;
 }) {
-  const ref = useRef<HTMLDialogElement>(null);
-  const id = useId();
-  useEffect(() => {
-    const dialog = ref.current;
-    const opener = document.activeElement as HTMLElement | null;
-    dialog?.showModal();
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      dialog?.close();
-      document.body.style.overflow = overflow;
-      opener?.focus();
-    };
-  }, []);
+  const opener = useRef<HTMLElement | null>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   return (
-    <dialog
-      ref={ref}
-      aria-labelledby={id}
-      className={styles.modal}
-      onCancel={(event) => {
-        event.preventDefault();
-        if (!busy) onClose();
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !busy) onClose();
       }}
     >
-      <header className={styles.modalHeader}>
-        <h2 id={id}>{title}</h2>
-        <button
-          className={styles.iconButton}
-          title="Fechar"
-          aria-label="Fechar"
-          type="button"
-          onClick={onClose}
-          disabled={busy}
-        >
-          <X size={18} />
-        </button>
-      </header>
-      <div className={styles.modalBody}>{children}</div>
-    </dialog>
+      <DialogContent
+        showCloseButton={false}
+        aria-describedby={undefined}
+        className={`${styles.modal} ${wide ? styles.modalWide : ''}`}
+        onOpenAutoFocus={(event) => {
+          opener.current = document.activeElement as HTMLElement | null;
+          event.preventDefault();
+          titleRef.current?.focus();
+        }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          opener.current?.focus();
+        }}
+        onEscapeKeyDown={(event) => {
+          if (busy) event.preventDefault();
+        }}
+        onInteractOutside={(event) => event.preventDefault()}
+      >
+        <header className={styles.modalHeader}>
+          <DialogTitle ref={titleRef} tabIndex={-1} className="outline-none">
+            {title}
+          </DialogTitle>
+          <IconButton
+            title="Fechar"
+            aria-label="Fechar"
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+          >
+            <X size={18} />
+          </IconButton>
+        </header>
+        <div className={styles.modalBody}>{children}</div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -67,13 +78,15 @@ export function Notice({
   tone?: 'warning' | 'error' | 'success';
 }) {
   return (
-    <p
+    <Alert
       className={styles.notice}
       data-tone={tone}
       role={tone === 'error' ? 'alert' : 'status'}
     >
-      {children}
-    </p>
+      <AlertDescription className="text-inherit text-[13px]">
+        {children}
+      </AlertDescription>
+    </Alert>
   );
 }
 
@@ -131,15 +144,15 @@ export function ExportButton({
   disabled?: boolean;
 }) {
   return (
-    <button
-      className={styles.secondary}
+    <Button
+      variant="outline"
       disabled={disabled || rows.length < 2}
       onClick={() => downloadCsv(name, rows)}
       type="button"
     >
       <Download size={16} />
       Exportar CSV
-    </button>
+    </Button>
   );
 }
 

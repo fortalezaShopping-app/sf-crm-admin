@@ -1,5 +1,9 @@
 'use client';
 
+import { IconButton } from '@/components/ui/icon-button';
+import { NativeSelect } from '@/components/ui/native-select';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { KeyRound, Pencil, ShieldCheck } from 'lucide-react';
@@ -65,7 +69,7 @@ export function PerfilClient() {
           <div className={s.settings}>
             <section className={s.section}>
               <h2>Identidade</h2>
-            <div className={s.profileIdentity}>
+              <div className={s.profileIdentity}>
                 <Avatar name={profile.name} src={profile.photoUrl} />
                 <dl className={`${s.details} ${s.detailGrid}`}>
                   <div>
@@ -92,26 +96,24 @@ export function PerfilClient() {
               <div className={s.setting}>
                 <span>Dados pessoais</span>
                 <span className={s.muted}>{profile.email}</span>
-                <button
-                  className={s.iconButton}
+                <IconButton
                   title="Editar dados pessoais"
                   aria-label="Editar dados pessoais"
                   onClick={() => setModal('identity')}
                 >
                   <Pencil size={16} />
-                </button>
+                </IconButton>
               </div>
               <div className={s.setting}>
                 <span>Alterar palavra-passe</span>
                 <span />
-                <button
-                  className={s.iconButton}
+                <IconButton
                   title="Alterar palavra-passe"
                   aria-label="Alterar palavra-passe"
                   onClick={() => setModal('password')}
                 >
                   <KeyRound size={16} />
-                </button>
+                </IconButton>
               </div>
               <div className={s.setting}>
                 <span>Autenticação de dois fatores</span>
@@ -122,14 +124,13 @@ export function PerfilClient() {
                       ? 'Ativa'
                       : 'Inativa'}
                 </span>
-                <button
-                  className={s.iconButton}
+                <IconButton
                   title="Autenticação de dois fatores"
                   aria-label="Autenticação de dois fatores"
                   onClick={() => setModal('2fa')}
                 >
                   <ShieldCheck size={16} />
-                </button>
+                </IconButton>
               </div>
             </section>
             <section className={s.section}>
@@ -137,7 +138,7 @@ export function PerfilClient() {
               <div className={s.setting}>
                 <span>Idioma</span>
                 <span>Português</span>
-                <select
+                <NativeSelect
                   className={s.select}
                   aria-label="Idioma"
                   disabled
@@ -145,7 +146,7 @@ export function PerfilClient() {
                   onChange={() => {}}
                 >
                   <option value="pt">Português</option>
-                </select>
+                </NativeSelect>
               </div>
               {[
                 'Notificações de sistema',
@@ -179,12 +180,9 @@ export function PerfilClient() {
               <div className={s.setting}>
                 <span>Dispositivos e histórico de acessos</span>
                 <span className={s.muted}>Indisponível na API</span>
-                <button
-                  className={s.secondary}
-                  onClick={() => setModal('sessions')}
-                >
+                <Button variant="outline" onClick={() => setModal('sessions')}>
                   Consultar
-                </button>
+                </Button>
               </div>
             </section>
           </div>
@@ -277,7 +275,7 @@ function IdentityEditor({
       <form className={s.form} onSubmit={submit}>
         <label>
           Nome
-          <input
+          <Input
             required
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -285,7 +283,7 @@ function IdentityEditor({
         </label>
         <label>
           Email
-          <input
+          <Input
             required
             type="email"
             value={form.email}
@@ -294,7 +292,7 @@ function IdentityEditor({
         </label>
         <label>
           Telefone
-          <input
+          <Input
             type="tel"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -302,17 +300,17 @@ function IdentityEditor({
         </label>
         {error && <Notice tone="error">{error}</Notice>}
         <div className={s.footer}>
-          <button
+          <Button
             type="button"
-            className={s.secondary}
+            variant="outline"
             disabled={busy}
             onClick={onClose}
           >
             Cancelar
-          </button>
-          <button className={s.button} disabled={busy}>
+          </Button>
+          <Button variant="default" disabled={busy}>
             {busy ? 'A guardar...' : 'Guardar perfil'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>
@@ -370,7 +368,7 @@ function PasswordEditor({
           <>
             <label>
               Código de confirmação
-              <input
+              <Input
                 required
                 inputMode="numeric"
                 pattern="[0-9]{6}"
@@ -382,7 +380,7 @@ function PasswordEditor({
             </label>
             <label>
               Nova palavra-passe
-              <input
+              <Input
                 required
                 type="password"
                 minLength={8}
@@ -393,7 +391,7 @@ function PasswordEditor({
             </label>
             <label>
               Confirmar palavra-passe
-              <input
+              <Input
                 required
                 type="password"
                 minLength={8}
@@ -406,21 +404,21 @@ function PasswordEditor({
         )}
         {error && <Notice tone="error">{error}</Notice>}
         <div className={s.footer}>
-          <button
+          <Button
             type="button"
-            className={s.secondary}
+            variant="outline"
             disabled={busy}
             onClick={onClose}
           >
             Cancelar
-          </button>
-          <button className={s.button} disabled={busy}>
+          </Button>
+          <Button variant="default" disabled={busy}>
             {busy
               ? 'A processar...'
               : sent
                 ? 'Atualizar palavra-passe'
                 : 'Enviar código'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

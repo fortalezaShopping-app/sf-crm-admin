@@ -1,5 +1,7 @@
 'use client';
 
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Ban, CircleCheck, RefreshCcw, Search, Users } from 'lucide-react';
 
@@ -43,7 +45,10 @@ export function ClientesClient() {
   }, []);
 
   async function handleDeactivate(cliente: Utilizador) {
-    if (!cliente.id || !window.confirm(`Desativar o cliente ${cliente.nome ?? cliente.email}?`)) {
+    if (
+      !cliente.id ||
+      !window.confirm(`Desativar o cliente ${cliente.nome ?? cliente.email}?`)
+    ) {
       return;
     }
 
@@ -62,7 +67,10 @@ export function ClientesClient() {
   }
 
   async function handleActivate(cliente: Utilizador) {
-    if (!cliente.id || !window.confirm(`Ativar o cliente ${cliente.nome ?? cliente.email}?`)) {
+    if (
+      !cliente.id ||
+      !window.confirm(`Ativar o cliente ${cliente.nome ?? cliente.email}?`)
+    ) {
       return;
     }
 
@@ -102,7 +110,10 @@ export function ClientesClient() {
   );
   const totalPages = Math.max(1, Math.ceil(filteredClientes.length / 10));
   const visiblePage = Math.min(page, totalPages - 1);
-  const visibleClientes = filteredClientes.slice(visiblePage * 10, (visiblePage + 1) * 10);
+  const visibleClientes = filteredClientes.slice(
+    visiblePage * 10,
+    (visiblePage + 1) * 10,
+  );
 
   return (
     <div className="dashboard-content">
@@ -116,7 +127,7 @@ export function ClientesClient() {
         <div className="topbar-actions">
           <label className="store-search admin-list-search">
             <Search aria-hidden size={15} strokeWidth={1.7} />
-            <input
+            <Input
               aria-label="Pesquisar clientes"
               autoComplete="off"
               onChange={(event) => {
@@ -129,14 +140,20 @@ export function ClientesClient() {
               value={query}
             />
           </label>
-          <button className="ghost-button" onClick={() => void loadClientes(true)} type="button">
+          <Button
+            variant="outline"
+            onClick={() => void loadClientes(true)}
+            type="button"
+          >
             <RefreshCcw aria-hidden size={16} />
             Atualizar
-          </button>
+          </Button>
         </div>
       </section>
 
-      {message ? <p className={getMessageClassName(message)}>{message}</p> : null}
+      {message ? (
+        <p className={getMessageClassName(message)}>{message}</p>
+      ) : null}
 
       <article className="panel">
         <div className="panel-header">
@@ -183,7 +200,9 @@ export function ClientesClient() {
                     </td>
                     <td>
                       {cliente.estado === 'ATIVO' ? (
-                        <button
+                        <Button
+                          variant="plain"
+                          size="plain"
                           className="table-action table-action--danger"
                           disabled={!cliente.id || actionId === cliente.id}
                           onClick={() => void handleDeactivate(cliente)}
@@ -191,9 +210,11 @@ export function ClientesClient() {
                         >
                           <Ban aria-hidden size={14} />
                           Desativar
-                        </button>
+                        </Button>
                       ) : (
-                        <button
+                        <Button
+                          variant="plain"
+                          size="plain"
                           className="table-action"
                           disabled={!cliente.id || actionId === cliente.id}
                           onClick={() => void handleActivate(cliente)}
@@ -201,7 +222,7 @@ export function ClientesClient() {
                         >
                           <CircleCheck aria-hidden size={14} />
                           Ativar
-                        </button>
+                        </Button>
                       )}
                     </td>
                   </tr>

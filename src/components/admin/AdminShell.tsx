@@ -1,5 +1,7 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
   BarChart3,
@@ -172,7 +174,9 @@ export function AdminShell({
               <Settings aria-hidden size={18} strokeWidth={1.6} />
               <span>Configurações</span>
             </Link>
-            <button
+            <Button
+              variant="plain"
+              size="plain"
               aria-label={`Sair da sessão de ${adminLabel}`}
               className={styles.footerLink}
               onClick={() => void handleSignOut()}
@@ -181,7 +185,7 @@ export function AdminShell({
             >
               <LogOut aria-hidden size={18} strokeWidth={1.6} />
               <span>Sair</span>
-            </button>
+            </Button>
           </div>
         </aside>
 
@@ -192,15 +196,17 @@ export function AdminShell({
               className={styles.searchShell}
               onSubmit={handleSearch}
             >
-              <button
+              <Button
+                variant="plain"
+                size="plain"
                 aria-label="Executar pesquisa"
                 className={styles.searchButton}
                 title="Pesquisar"
                 type="submit"
               >
                 <Search aria-hidden size={17} strokeWidth={1.7} />
-              </button>
-              <input
+              </Button>
+              <Input
                 autoComplete="off"
                 aria-label="Pesquisar no painel"
                 onChange={(event) => setSearch(event.target.value)}
@@ -210,7 +216,9 @@ export function AdminShell({
                 value={search}
               />
               {search ? (
-                <button
+                <Button
+                  variant="plain"
+                  size="plain"
                   aria-label="Limpar pesquisa"
                   className={styles.searchButton}
                   onClick={handleClearSearch}
@@ -218,7 +226,7 @@ export function AdminShell({
                   type="button"
                 >
                   <X aria-hidden size={15} strokeWidth={1.8} />
-                </button>
+                </Button>
               ) : (
                 <span aria-hidden className={styles.searchSpacer} />
               )}

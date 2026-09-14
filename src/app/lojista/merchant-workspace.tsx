@@ -1,5 +1,8 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import type { IScannerControls } from '@zxing/browser';
 import {
   Camera,
@@ -20,13 +23,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import {
-  FormEvent,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 
 import { ShoppingLogo } from '@/components/brand/ShoppingLogo';
 import type { AdminSession } from '@/lib/admin-session';
@@ -64,7 +61,8 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
   const [cameraState, setCameraState] = useState<CameraState>('idle');
   const [manualMode, setManualMode] = useState(false);
   const [manualQr, setManualQr] = useState('');
-  const [scanResult, setScanResult] = useState<StorePurchaseScanResponse | null>(null);
+  const [scanResult, setScanResult] =
+    useState<StorePurchaseScanResponse | null>(null);
   const [purchase, setPurchase] = useState<StorePurchaseResponse | null>(null);
   const [amount, setAmount] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +107,10 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
       } catch (loadError) {
         if (active) {
           setStoreError(
-            getErrorMessage(loadError, 'Nao foi possivel carregar a loja associada.'),
+            getErrorMessage(
+              loadError,
+              'Nao foi possivel carregar a loja associada.',
+            ),
           );
         }
       }
@@ -126,7 +127,9 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
 
   async function handleSignOut() {
     stopScanner();
-    await fetch('/api/session/logout', { method: 'POST' }).catch(() => undefined);
+    await fetch('/api/session/logout', { method: 'POST' }).catch(
+      () => undefined,
+    );
     router.replace('/login');
     router.refresh();
   }
@@ -214,7 +217,9 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
       setStep('amount');
     } catch (scanError) {
       await handleSessionError(scanError);
-      setError(getErrorMessage(scanError, 'Nao foi possivel validar o QR do cliente.'));
+      setError(
+        getErrorMessage(scanError, 'Nao foi possivel validar o QR do cliente.'),
+      );
     } finally {
       requestInFlightRef.current = false;
       setIsSubmitting(false);
@@ -246,12 +251,17 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
     setIsSubmitting(true);
 
     try {
-      const result = await confirmStorePurchase(scanResult.purchaseId, parsedAmount);
+      const result = await confirmStorePurchase(
+        scanResult.purchaseId,
+        parsedAmount,
+      );
       setPurchase(result);
       setStep('success');
     } catch (confirmError) {
       await handleSessionError(confirmError);
-      setError(getErrorMessage(confirmError, 'Nao foi possivel confirmar a compra.'));
+      setError(
+        getErrorMessage(confirmError, 'Nao foi possivel confirmar a compra.'),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -280,7 +290,9 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
       return;
     }
 
-    await fetch('/api/session/logout', { method: 'POST' }).catch(() => undefined);
+    await fetch('/api/session/logout', { method: 'POST' }).catch(
+      () => undefined,
+    );
     router.replace('/login');
     router.refresh();
   }
@@ -301,7 +313,9 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
               <strong>{accountLabel}</strong>
               <span>Lojista</span>
             </span>
-            <button
+            <Button
+              variant="plain"
+              size="plain"
               aria-label="Terminar sessão"
               className={styles.iconButton}
               onClick={() => void handleSignOut()}
@@ -309,7 +323,7 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
               type="button"
             >
               <LogOut aria-hidden size={18} strokeWidth={1.7} />
-            </button>
+            </Button>
           </div>
         </div>
       </header>
@@ -330,7 +344,9 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
                 storeId={initialSession.storeId}
               />
               <span className={styles.assignedStoreCopy}>
-                <strong>{store?.nome ?? `Loja #${initialSession.storeId}`}</strong>
+                <strong>
+                  {store?.nome ?? `Loja #${initialSession.storeId}`}
+                </strong>
                 <small>Conta vinculada</small>
               </span>
               <LockKeyhole aria-hidden size={17} strokeWidth={1.7} />
@@ -338,10 +354,28 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
           </div>
         </div>
 
-        <ol className={styles.steps} aria-label="Progresso do registo da compra">
-          <ProgressStep active={step === 'scan'} complete={step !== 'scan'} index={1} label="Cliente" />
-          <ProgressStep active={step === 'amount'} complete={step === 'success'} index={2} label="Compra" />
-          <ProgressStep active={step === 'success'} complete={false} index={3} label="Concluído" />
+        <ol
+          className={styles.steps}
+          aria-label="Progresso do registo da compra"
+        >
+          <ProgressStep
+            active={step === 'scan'}
+            complete={step !== 'scan'}
+            index={1}
+            label="Cliente"
+          />
+          <ProgressStep
+            active={step === 'amount'}
+            complete={step === 'success'}
+            index={2}
+            label="Compra"
+          />
+          <ProgressStep
+            active={step === 'success'}
+            complete={false}
+            index={3}
+            label="Concluído"
+          />
         </ol>
 
         {storeError ? (
@@ -375,8 +409,13 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
                   {cameraState !== 'active' ? (
                     <div className={styles.cameraEmpty}>
                       {isSubmitting || cameraState === 'starting' ? (
-                        <LoaderCircle aria-hidden className={styles.spinner} size={34} />
-                      ) : cameraState === 'denied' || cameraState === 'unavailable' ? (
+                        <LoaderCircle
+                          aria-hidden
+                          className={styles.spinner}
+                          size={34}
+                        />
+                      ) : cameraState === 'denied' ||
+                        cameraState === 'unavailable' ? (
                         <Camera aria-hidden size={36} strokeWidth={1.4} />
                       ) : (
                         <QrCode aria-hidden size={42} strokeWidth={1.35} />
@@ -384,32 +423,38 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
                     </div>
                   ) : null}
 
-                  {cameraState === 'active' ? <span className={styles.scanTarget} aria-hidden /> : null}
+                  {cameraState === 'active' ? (
+                    <span className={styles.scanTarget} aria-hidden />
+                  ) : null}
                 </div>
 
                 <div className={styles.scannerActions}>
                   {cameraState === 'active' || cameraState === 'starting' ? (
-                    <button
-                      className={styles.secondaryButton}
+                    <Button
+                      variant="outline"
+
                       onClick={() => stopScanner()}
                       type="button"
                     >
                       <X aria-hidden size={17} strokeWidth={1.8} />
                       Fechar câmara
-                    </button>
+                    </Button>
                   ) : (
-                    <button
-                      className={styles.primaryButton}
+                    <Button
+                      variant="default"
+
                       disabled={isSubmitting}
                       onClick={() => void startScanner()}
                       type="button"
                     >
                       <Camera aria-hidden size={18} strokeWidth={1.8} />
                       Abrir câmara
-                    </button>
+                    </Button>
                   )}
 
-                  <button
+                  <Button
+                    variant="plain"
+                    size="plain"
                     className={styles.textButton}
                     disabled={isSubmitting}
                     onClick={() => {
@@ -421,7 +466,7 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
                   >
                     <Keyboard aria-hidden size={17} strokeWidth={1.7} />
                     Inserir código
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -434,14 +479,19 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
                   />
                   <div>
                     <span>Loja associada</span>
-                    <strong>{store?.nome ?? `Loja #${initialSession.storeId}`}</strong>
+                    <strong>
+                      {store?.nome ?? `Loja #${initialSession.storeId}`}
+                    </strong>
                   </div>
                 </div>
 
                 {manualMode ? (
-                  <form className={styles.manualForm} onSubmit={handleManualSubmit}>
+                  <form
+                    className={styles.manualForm}
+                    onSubmit={handleManualSubmit}
+                  >
                     <label htmlFor="manual-qr">Código do QR</label>
-                    <textarea
+                    <Textarea
                       autoComplete="off"
                       id="manual-qr"
                       onChange={(event) => setManualQr(event.target.value)}
@@ -450,23 +500,31 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
                       spellCheck={false}
                       value={manualQr}
                     />
-                    <button
-                      className={styles.primaryButton}
+                    <Button
+                      variant="default"
+
                       disabled={isSubmitting || !manualQr.trim()}
                       type="submit"
                     >
                       {isSubmitting ? (
-                        <LoaderCircle aria-hidden className={styles.spinner} size={18} />
+                        <LoaderCircle
+                          aria-hidden
+                          className={styles.spinner}
+                          size={18}
+                        />
                       ) : (
                         <ShieldCheck aria-hidden size={18} strokeWidth={1.8} />
                       )}
                       Validar cliente
-                    </button>
+                    </Button>
                   </form>
                 ) : (
                   <div className={styles.statusList}>
                     <StatusRow complete label="Loja associada" />
-                    <StatusRow complete={cameraState === 'active'} label="Câmara ativa" />
+                    <StatusRow
+                      complete={cameraState === 'active'}
+                      label="Câmara ativa"
+                    />
                     <StatusRow complete={false} label="Cliente validado" />
                   </div>
                 )}
@@ -479,10 +537,16 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
           {step === 'amount' && scanResult ? (
             <>
               <div className={styles.customerColumn}>
-                <button className={styles.backButton} onClick={returnToScanner} type="button">
+                <Button
+                  variant="plain"
+                  size="plain"
+                  className={styles.backButton}
+                  onClick={returnToScanner}
+                  type="button"
+                >
                   <ChevronLeft aria-hidden size={18} strokeWidth={1.8} />
                   Voltar
-                </button>
+                </Button>
 
                 <div className={styles.customerIdentity}>
                   <span className={styles.customerAvatar} aria-hidden>
@@ -490,18 +554,29 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
                   </span>
                   <div>
                     <span>Cliente validado</span>
-                    <h2>{scanResult.customerName ?? `Cliente #${scanResult.customerId ?? ''}`}</h2>
+                    <h2>
+                      {scanResult.customerName ??
+                        `Cliente #${scanResult.customerId ?? ''}`}
+                    </h2>
                     {scanResult.expiresAt ? (
                       <p>Válido até {formatTime(scanResult.expiresAt)}</p>
                     ) : null}
                   </div>
-                  <CheckCircle2 aria-label="QR validado" className={styles.validIcon} size={30} />
+                  <CheckCircle2
+                    aria-label="QR validado"
+                    className={styles.validIcon}
+                    size={30}
+                  />
                 </div>
 
                 <dl className={styles.purchaseDetails}>
                   <div>
                     <dt>Loja</dt>
-                    <dd>{scanResult.storeName ?? store?.nome ?? `Loja #${initialSession.storeId}`}</dd>
+                    <dd>
+                      {scanResult.storeName ??
+                        store?.nome ??
+                        `Loja #${initialSession.storeId}`}
+                    </dd>
                   </div>
                   <div>
                     <dt>Estado</dt>
@@ -523,7 +598,7 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
                   <label htmlFor="purchase-amount">Total</label>
                   <div className={styles.amountInput}>
                     <span>Kz</span>
-                    <input
+                    <Input
                       autoFocus
                       id="purchase-amount"
                       inputMode="decimal"
@@ -539,18 +614,23 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
 
                   {error ? <ErrorMessage message={error} /> : null}
 
-                  <button
-                    className={styles.primaryButton}
+                  <Button
+                    variant="default"
+
                     disabled={isSubmitting || !amount}
                     type="submit"
                   >
                     {isSubmitting ? (
-                      <LoaderCircle aria-hidden className={styles.spinner} size={18} />
+                      <LoaderCircle
+                        aria-hidden
+                        className={styles.spinner}
+                        size={18}
+                      />
                     ) : (
                       <Check aria-hidden size={18} strokeWidth={1.9} />
                     )}
                     Confirmar compra
-                  </button>
+                  </Button>
                 </form>
               </div>
             </>
@@ -564,24 +644,36 @@ export function MerchantWorkspace({ initialSession }: MerchantWorkspaceProps) {
               <div className={styles.successCopy}>
                 <span>Compra registada</span>
                 <h2>{formatPoints(purchase.points)}</h2>
-                <p>{purchase.customerName ?? scanResult?.customerName ?? 'Cliente'}</p>
+                <p>
+                  {purchase.customerName ??
+                    scanResult?.customerName ??
+                    'Cliente'}
+                </p>
               </div>
 
               <dl className={styles.successDetails}>
                 <div>
                   <dt>Valor</dt>
-                  <dd>{formatCurrency(purchase.amount ?? parseAmount(amount) ?? 0)}</dd>
+                  <dd>
+                    {formatCurrency(
+                      purchase.amount ?? parseAmount(amount) ?? 0,
+                    )}
+                  </dd>
                 </div>
                 <div>
                   <dt>Loja</dt>
-                  <dd>{purchase.storeName ?? store?.nome ?? `Loja #${initialSession.storeId}`}</dd>
+                  <dd>
+                    {purchase.storeName ??
+                      store?.nome ??
+                      `Loja #${initialSession.storeId}`}
+                  </dd>
                 </div>
               </dl>
 
-              <button className={styles.primaryButton} onClick={resetFlow} type="button">
+              <Button variant="default" onClick={resetFlow} type="button">
                 <RotateCcw aria-hidden size={18} strokeWidth={1.8} />
                 Nova compra
-              </button>
+              </Button>
             </div>
           ) : null}
         </section>
@@ -609,7 +701,9 @@ function ProgressStep({
 
   return (
     <li aria-current={active ? 'step' : undefined} className={className}>
-      <span>{complete ? <Check aria-hidden size={14} strokeWidth={2.1} /> : index}</span>
+      <span>
+        {complete ? <Check aria-hidden size={14} strokeWidth={2.1} /> : index}
+      </span>
       <strong>{label}</strong>
     </li>
   );
@@ -617,14 +711,28 @@ function ProgressStep({
 
 function StatusRow({ complete, label }: { complete: boolean; label: string }) {
   return (
-    <div className={complete ? `${styles.statusRow} ${styles.statusComplete}` : styles.statusRow}>
-      <span aria-hidden>{complete ? <Check size={13} strokeWidth={2.2} /> : null}</span>
+    <div
+      className={
+        complete
+          ? `${styles.statusRow} ${styles.statusComplete}`
+          : styles.statusRow
+      }
+    >
+      <span aria-hidden>
+        {complete ? <Check size={13} strokeWidth={2.2} /> : null}
+      </span>
       <strong>{label}</strong>
     </div>
   );
 }
 
-function MerchantStoreLogo({ store, storeId }: { store?: Loja; storeId?: number }) {
+function MerchantStoreLogo({
+  store,
+  storeId,
+}: {
+  store?: Loja;
+  storeId?: number;
+}) {
   const [failed, setFailed] = useState(false);
   const id = store?.id ?? storeId;
   const src = id ? getPublicLojaLogoPath(id) : null;
@@ -681,8 +789,10 @@ function getCameraStatus(cameraState: CameraState, isSubmitting: boolean) {
 }
 
 function isCameraPermissionError(error: unknown) {
-  return error instanceof DOMException &&
-    (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError');
+  return (
+    error instanceof DOMException &&
+    (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError')
+  );
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -746,5 +856,8 @@ function getInitials(name?: string) {
     return 'SF';
   }
 
-  return words.slice(0, 2).map((word) => word[0]?.toUpperCase()).join('');
+  return words
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase())
+    .join('');
 }

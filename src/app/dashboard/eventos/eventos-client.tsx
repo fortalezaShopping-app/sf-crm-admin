@@ -1,5 +1,8 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   type FormEvent,
   useCallback,
@@ -170,7 +173,10 @@ export function EventosClient() {
     });
   }, [deferredQuery, eventos, statusFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredEventos.length / ITEMS_PER_PAGE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredEventos.length / ITEMS_PER_PAGE),
+  );
   const visiblePage = Math.min(page, totalPages - 1);
   const visibleEventos = filteredEventos.slice(
     visiblePage * ITEMS_PER_PAGE,
@@ -282,18 +288,24 @@ export function EventosClient() {
       <header className={styles.heading}>
         <div className={styles.headingCopy}>
           <h1>Eventos</h1>
-          <p>Crie e publique a agenda que será apresentada no aplicativo mobile.</p>
+          <p>
+            Crie e publique a agenda que será apresentada no aplicativo mobile.
+          </p>
         </div>
 
-        <button className={styles.createButton} onClick={openCreateEvent} type="button">
+        <Button variant="default" onClick={openCreateEvent} type="button">
           <Plus aria-hidden size={17} strokeWidth={1.8} />
           Novo evento
-        </button>
+        </Button>
       </header>
 
       {message && !isEditorOpen ? (
         <p
-          className={message.includes('sucesso') ? styles.successNotice : styles.errorNotice}
+          className={
+            message.includes('sucesso')
+              ? styles.successNotice
+              : styles.errorNotice
+          }
           role={message.includes('sucesso') ? 'status' : 'alert'}
         >
           {message}
@@ -302,28 +314,39 @@ export function EventosClient() {
 
       <section className={styles.tableCard}>
         <div className={styles.filters}>
-          <div aria-label="Filtrar eventos por estado" className={styles.statusTabs}>
+          <div
+            aria-label="Filtrar eventos por estado"
+            className={styles.statusTabs}
+          >
             {statusFilters.map((filter) => (
-              <button
+              <Button
+                variant="plain"
+                size="plain"
                 aria-pressed={statusFilter === filter.value}
                 className={
-                  statusFilter === filter.value ? styles.statusTabActive : styles.statusTab
+                  statusFilter === filter.value
+                    ? styles.statusTabActive
+                    : styles.statusTab
                 }
                 key={filter.value}
-                onClick={() => updateFilters(() => setStatusFilter(filter.value))}
+                onClick={() =>
+                  updateFilters(() => setStatusFilter(filter.value))
+                }
                 type="button"
               >
                 {filter.label}
-              </button>
+              </Button>
             ))}
           </div>
 
           <label className={styles.searchField}>
             <Search aria-hidden size={14} strokeWidth={1.7} />
-            <input
+            <Input
               aria-label="Pesquisar eventos"
               autoComplete="off"
-              onChange={(event) => updateFilters(() => setQuery(event.target.value))}
+              onChange={(event) =>
+                updateFilters(() => setQuery(event.target.value))
+              }
               placeholder="Pesquisar eventos"
               spellCheck={false}
               type="search"
@@ -350,7 +373,9 @@ export function EventosClient() {
                   const status = getStatusKind(evento.estado);
 
                   return (
-                    <tr key={evento.id ?? `${evento.titulo}-${evento.dataInicio}`}>
+                    <tr
+                      key={evento.id ?? `${evento.titulo}-${evento.dataInicio}`}
+                    >
                       <td>
                         <span className={styles.eventIdentity}>
                           <EventImage
@@ -360,7 +385,9 @@ export function EventosClient() {
                             version={imageVersion}
                           />
                           <span>
-                            <strong>{evento.titulo ?? 'Evento sem título'}</strong>
+                            <strong>
+                              {evento.titulo ?? 'Evento sem título'}
+                            </strong>
                             <small>{evento.descricao || 'Sem descrição'}</small>
                           </span>
                         </span>
@@ -375,61 +402,75 @@ export function EventosClient() {
                       </td>
                       <td>
                         <span className={styles.actions}>
-                          <button
-                            disabled={!evento.id || actionId === `edit-${evento.id}`}
+                          <Button
+                            disabled={
+                              !evento.id || actionId === `edit-${evento.id}`
+                            }
                             onClick={() => void startEditing(evento)}
                             title="Editar evento"
                             type="button"
                           >
                             <Pencil aria-hidden size={12} />
                             Editar
-                          </button>
+                          </Button>
 
                           {status === 'ACTIVE' ? (
-                            <button
+                            <Button
                               disabled={actionId === `deactivate-${evento.id}`}
-                              onClick={() => void handleStatusAction(evento, 'deactivate')}
+                              onClick={() =>
+                                void handleStatusAction(evento, 'deactivate')
+                              }
                               title="Desativar evento"
                               type="button"
                             >
                               <Ban aria-hidden size={12} />
                               Desativar
-                            </button>
+                            </Button>
                           ) : (
-                            <button
+                            <Button
                               disabled={actionId === `activate-${evento.id}`}
-                              onClick={() => void handleStatusAction(evento, 'activate')}
+                              onClick={() =>
+                                void handleStatusAction(evento, 'activate')
+                              }
                               title="Ativar evento"
                               type="button"
                             >
                               <CircleCheck aria-hidden size={12} />
                               Ativar
-                            </button>
+                            </Button>
                           )}
 
                           {status !== 'CANCELED' ? (
-                            <button
+                            <Button
+                              variant="plain"
+                              size="plain"
                               className={styles.warningAction}
                               disabled={actionId === `cancel-${evento.id}`}
-                              onClick={() => void handleStatusAction(evento, 'cancel')}
+                              onClick={() =>
+                                void handleStatusAction(evento, 'cancel')
+                              }
                               title="Cancelar evento"
                               type="button"
                             >
                               <X aria-hidden size={12} />
                               Cancelar
-                            </button>
+                            </Button>
                           ) : null}
 
-                          <button
+                          <Button
+                            variant="plain"
+                            size="plain"
                             aria-label={`Eliminar ${evento.titulo ?? 'evento'}`}
                             className={styles.dangerAction}
                             disabled={actionId === `delete-${evento.id}`}
-                            onClick={() => void handleStatusAction(evento, 'delete')}
+                            onClick={() =>
+                              void handleStatusAction(evento, 'delete')
+                            }
                             title="Eliminar permanentemente"
                             type="button"
                           >
                             <Trash2 aria-hidden size={12} />
-                          </button>
+                          </Button>
                         </span>
                       </td>
                     </tr>
@@ -489,7 +530,9 @@ export function EventosClient() {
                     : 'Publicação para o aplicativo mobile'}
                 </p>
               </div>
-              <button
+              <Button
+                variant="plain"
+                size="plain"
                 aria-label="Fechar formulário"
                 className={styles.closeButton}
                 disabled={isSubmitting}
@@ -497,7 +540,7 @@ export function EventosClient() {
                 type="button"
               >
                 <X aria-hidden size={19} />
-              </button>
+              </Button>
             </header>
 
             {message ? (
@@ -511,7 +554,8 @@ export function EventosClient() {
                 <EventImage
                   available={Boolean(
                     editingEventId &&
-                      eventos.find((evento) => evento.id === editingEventId)?.imageUrl,
+                    eventos.find((evento) => evento.id === editingEventId)
+                      ?.imageUrl,
                   )}
                   id={editingEventId ?? undefined}
                   name={form.titulo}
@@ -521,18 +565,26 @@ export function EventosClient() {
                 />
                 <div>
                   <strong>Imagem de capa</strong>
-                  <p>JPEG, PNG ou WebP. A imagem é opcional e pode ser substituída depois.</p>
+                  <p>
+                    JPEG, PNG ou WebP. A imagem é opcional e pode ser
+                    substituída depois.
+                  </p>
                 </div>
               </div>
 
-              <form className={`admin-form ${styles.form}`} onSubmit={handleSubmit}>
+              <form
+                className={`admin-form ${styles.form}`}
+                onSubmit={handleSubmit}
+              >
                 <div className="form-section-heading">Informação principal</div>
 
                 <label>
                   Título
-                  <input
+                  <Input
                     maxLength={200}
-                    onChange={(event) => setForm({ ...form, titulo: event.target.value })}
+                    onChange={(event) =>
+                      setForm({ ...form, titulo: event.target.value })
+                    }
                     required
                     value={form.titulo}
                   />
@@ -540,9 +592,11 @@ export function EventosClient() {
 
                 <label>
                   Local
-                  <input
+                  <Input
                     maxLength={300}
-                    onChange={(event) => setForm({ ...form, local: event.target.value })}
+                    onChange={(event) =>
+                      setForm({ ...form, local: event.target.value })
+                    }
                     placeholder="Shopping Fortaleza"
                     value={form.local}
                   />
@@ -550,9 +604,11 @@ export function EventosClient() {
 
                 <label className={styles.fullWidth}>
                   Descrição
-                  <textarea
+                  <Textarea
                     maxLength={2000}
-                    onChange={(event) => setForm({ ...form, descricao: event.target.value })}
+                    onChange={(event) =>
+                      setForm({ ...form, descricao: event.target.value })
+                    }
                     rows={5}
                     value={form.descricao}
                   />
@@ -562,8 +618,10 @@ export function EventosClient() {
 
                 <label>
                   Início
-                  <input
-                    onChange={(event) => setForm({ ...form, dataInicio: event.target.value })}
+                  <Input
+                    onChange={(event) =>
+                      setForm({ ...form, dataInicio: event.target.value })
+                    }
                     required
                     type="datetime-local"
                     value={form.dataInicio}
@@ -572,9 +630,11 @@ export function EventosClient() {
 
                 <label>
                   Fim
-                  <input
+                  <Input
                     min={form.dataInicio}
-                    onChange={(event) => setForm({ ...form, dataFim: event.target.value })}
+                    onChange={(event) =>
+                      setForm({ ...form, dataFim: event.target.value })
+                    }
                     required
                     type="datetime-local"
                     value={form.dataFim}
@@ -582,10 +642,14 @@ export function EventosClient() {
                 </label>
 
                 <label className={styles.fullWidth}>
-                  {editingEventId ? 'Substituir imagem de capa' : 'Imagem de capa'}
-                  <input
+                  {editingEventId
+                    ? 'Substituir imagem de capa'
+                    : 'Imagem de capa'}
+                  <Input
                     accept="image/jpeg,image/png,image/webp"
-                    onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
+                    onChange={(event) =>
+                      setImageFile(event.target.files?.[0] ?? null)
+                    }
                     type="file"
                   />
                   <span className="form-hint">
@@ -597,7 +661,11 @@ export function EventosClient() {
                 </label>
 
                 <div className="form-actions">
-                  <button className="primary-button" disabled={isSubmitting} type="submit">
+                  <Button
+                    variant="default"
+                    disabled={isSubmitting}
+                    type="submit"
+                  >
                     {editingEventId ? (
                       <Save aria-hidden size={16} />
                     ) : (
@@ -608,11 +676,11 @@ export function EventosClient() {
                       : editingEventId
                         ? 'Guardar alterações'
                         : 'Criar evento'}
-                  </button>
-                  <button className="ghost-button" onClick={closeEditor} type="button">
+                  </Button>
+                  <Button variant="outline" onClick={closeEditor} type="button">
                     <X aria-hidden size={16} />
                     Cancelar
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>
@@ -672,13 +740,16 @@ function toRequest(form: FormState): EventoRequest {
 }
 
 function toDateTimeLocal(value: string | Date | undefined) {
-  const date = value instanceof Date ? value : value ? new Date(value) : new Date();
+  const date =
+    value instanceof Date ? value : value ? new Date(value) : new Date();
 
   if (Number.isNaN(date.getTime())) {
     return '';
   }
 
-  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  const localDate = new Date(
+    date.getTime() - date.getTimezoneOffset() * 60_000,
+  );
   return localDate.toISOString().slice(0, 16);
 }
 
@@ -701,7 +772,11 @@ function formatDate(value?: string) {
 function getStatusKind(status?: string): EventStatusKind {
   const normalized = status?.trim().toUpperCase();
 
-  if (normalized === 'ACTIVE' || normalized === 'ATIVO' || normalized === 'PUBLISHED') {
+  if (
+    normalized === 'ACTIVE' ||
+    normalized === 'ATIVO' ||
+    normalized === 'PUBLISHED'
+  ) {
     return 'ACTIVE';
   }
 
