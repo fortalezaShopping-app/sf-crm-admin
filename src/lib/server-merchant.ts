@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server';
 
 import type { AdminSession } from '@/lib/admin-session';
 import { BackendApiError } from '@/lib/server-backend';
+import { RequestInputError } from '@/lib/request-security';
+export { isSameOriginRequest } from '@/lib/request-security';
 import {
   getAdminToken,
   getAuthenticatedBackofficeSession,
@@ -55,13 +57,8 @@ export async function getMerchantContext(): Promise<MerchantContext> {
   };
 }
 
-export function isSameOriginRequest(request: Request) {
-  const origin = request.headers.get('origin');
-  return !origin || origin === new URL(request.url).origin;
-}
-
 export function merchantErrorResponse(error: unknown) {
-  if (error instanceof MerchantAccessError || error instanceof BackendApiError) {
+  if (error instanceof MerchantAccessError || error instanceof BackendApiError || error instanceof RequestInputError) {
     return NextResponse.json({ message: error.message }, { status: error.status });
   }
 

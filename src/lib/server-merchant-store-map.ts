@@ -6,18 +6,10 @@ type MerchantIdentity = {
 };
 
 const ENV_NAME = 'SF_MERCHANT_STORE_MAP';
-const DEFAULT_TEMPORARY_STORE_MAP: Record<string, number> = {
-  'afriteste@teste.com': 9,
-  'calvin@teste.com': 64,
-  'id:8': 9,
-  'id:9': 64,
-};
 
 export function getTemporaryMerchantStoreId({ email, id }: MerchantIdentity) {
   const rawMap = process.env[ENV_NAME]?.trim();
-  const storeMap = rawMap
-    ? { ...DEFAULT_TEMPORARY_STORE_MAP, ...parseStoreMap(rawMap) }
-    : DEFAULT_TEMPORARY_STORE_MAP;
+  const storeMap = rawMap ? parseStoreMap(rawMap) : {};
   const keys = [
     toPositiveInteger(id) ? `id:${id}` : undefined,
     normalizeEmail(email),

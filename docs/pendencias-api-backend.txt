@@ -97,6 +97,11 @@ PRIORIDADE 2 - COMPLETAR OS DADOS E FLUXOS DAS TELAS
 - Permitir consultar a associacao atual na gestao administrativa.
 - Garantir que leitura de QR e confirmacao de compra usam apenas a loja autorizada
   da sessao; o lojista nao pode escolher outra loja por manipulacao do pedido.
+- A confirmacao deve validar a propriedade da compra ANTES de creditar pontos,
+  de forma atomica e idempotente. Verificar a resposta no frontend nao desfaz
+  uma compra indevida. Nao existe consulta de compra pendente no contrato atual.
+- O painel deixou de confiar em cookies de funcao/loja e de assumir ADMIN quando
+  a funcao falta. Perfil/JWT devem permitir reconstruir a sessao apos o login.
 
 COMPLEMENTOS PARA O PROJETO
 
@@ -115,6 +120,16 @@ COMPLEMENTOS PARA O PROJETO
 - Disponibilizar exportacao global de dados apenas para administradores autorizados.
 - A reposicao global dos pontos aparece no modelo, mas deve depender de aprovacao
   do negocio, reautenticacao, confirmacao reforcada e auditoria antes de ser ativada.
+
+12. SEGURANCA OPERACIONAL
+- Confirmar limitacao partilhada de tentativas no login, recuperacao de senha e
+  leitura/confirmacao de QR, incluindo respostas 429 e politica de desbloqueio.
+- Garantir validacao e revogacao de tokens e permissoes em cada rota, mesmo quando
+  o pedido nao passa pelo painel. A protecao do frontend nao substitui a da API.
+- Validar conteudo real, tamanho e acesso dos uploads, incluindo imagens e PDFs;
+  nao confiar apenas no nome/extensao ou Content-Type enviado pelo cliente.
+- As dependencias e protecoes HTTP do sf-admin foram reforcadas localmente em
+  14/09/2026. Isto nao constitui auditoria do backend nem validacao de producao.
 
 O QUE JA EXISTE E NAO DEVE SER PEDIDO COMO NOVO
 - Listagem de utilizadores, edicao de contactos e ativacao/desativacao.

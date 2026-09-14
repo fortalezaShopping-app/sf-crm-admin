@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 
-import { ADMIN_TOKEN_COOKIE } from '@/lib/admin-session';
+import { ADMIN_TOKEN_COOKIE, BACKOFFICE_ROLE_COOKIE, BACKOFFICE_STORE_COOKIE } from '@/lib/admin-session';
 import { getApiBaseUrl } from '@/lib/env';
 import { resolveAdminSession } from '@/lib/server-backend';
-import { getAdminToken } from '@/lib/server-auth';
+import { getAdminToken, getAuthenticatedBackofficeSession } from '@/lib/server-auth';
+import { canProxyRequest, getProxyTargetUrl, isSameOriginRequest, MAX_PROXY_BODY_BYTES, readRequestBody, RequestInputError } from '@/lib/request-security';
 
 type ProxyContext = {
   params: Promise<{
@@ -44,24 +45,31 @@ async function proxyRequest(request: Request, context: ProxyContext) {
     return NextResponse.json({ message: 'Origem do pedido invalida.' }, { status: 403 });
   }
 
-  const targetUrl = await getTargetUrl(request, context);
-
-  if (targetUrl.pathname.startsWith('/api/store/purchases')) {
-    return NextResponse.json(
-      { message: 'Use o fluxo protegido da area do lojista.' },
-      { status: 403 },
-    );
-  }
-
-  const method = request.method.toUpperCase();
-  const body = method === 'GET' || method === 'HEAD' ? undefined : await request.arrayBuffer();
-
   try {
+    const { path } = await context.params;
+    const targetUrl = getProxyTargetUrl(path, request.url, getApiBaseUrl());
+    const session = await getAuthenticatedBackofficeSession();
+    if (!session) {
+      return NextResponse.json({ message: 'Sessao expirada.' }, { status: 401 });
+    }
+
+    const method = request.method.toUpperCase();
+    if (!canProxyRequest(session, targetUrl.pathname, method)) {
+      return NextResponse.json(
+        { message: 'A sua conta nao tem permissao para aceder a este recurso.' },
+        { status: 403 },
+      );
+    }
+    const body = method === 'GET' || method === 'HEAD'
+      ? undefined
+      : await readRequestBody(request, MAX_PROXY_BODY_BYTES);
+
     const response = await fetch(targetUrl, {
       body,
       cache: 'no-store',
       headers: getForwardedHeaders(request.headers, token),
       method,
+      redirect: 'error',
       signal: AbortSignal.timeout(12_000),
     });
 
@@ -84,17 +92,17 @@ async function proxyRequest(request: Request, context: ProxyContext) {
 
     if (response.status === 401 && !sessionIsValid) {
       proxyResponse.cookies.delete(ADMIN_TOKEN_COOKIE);
+      proxyResponse.cookies.delete(BACKOFFICE_ROLE_COOKIE);
+      proxyResponse.cookies.delete(BACKOFFICE_STORE_COOKIE);
     }
 
     return proxyResponse;
   } catch (error) {
+    if (error instanceof RequestInputError) {
+      return NextResponse.json({ message: error.message }, { status: error.status });
+    }
     return Response.json(
-      {
-        message:
-          error instanceof Error
-            ? `Falha ao contactar a API: ${error.message}`
-            : 'Falha ao contactar a API.',
-      },
+      { message: 'Falha ao contactar a API.' },
       { status: 502 },
     );
   }
@@ -107,16 +115,6 @@ async function canResolveAdminSession(token: string) {
   } catch {
     return false;
   }
-}
-
-async function getTargetUrl(request: Request, context: ProxyContext) {
-  const { path } = await context.params;
-  const sourceUrl = new URL(request.url);
-  const targetPath = path.map((part) => encodeURIComponent(part)).join('/');
-  const targetUrl = new URL(`/${targetPath}`, getApiBaseUrl());
-
-  targetUrl.search = sourceUrl.search;
-  return targetUrl;
 }
 
 function getForwardedHeaders(sourceHeaders: Headers, token: string) {
@@ -135,19 +133,9 @@ function getForwardedHeaders(sourceHeaders: Headers, token: string) {
   return headers;
 }
 
-function isSameOriginRequest(request: Request) {
-  const method = request.method.toUpperCase();
-
-  if (method === 'GET' || method === 'HEAD') {
-    return true;
-  }
-
-  const origin = request.headers.get('origin');
-  return !origin || origin === new URL(request.url).origin;
-}
-
 function getResponseHeaders(sourceHeaders: Headers) {
   const headers = new Headers();
+  headers.set('Cache-Control', 'private, no-store');
   const contentType = sourceHeaders.get('content-type');
 
   if (contentType) {

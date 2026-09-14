@@ -2,16 +2,13 @@ import { NextResponse } from 'next/server';
 
 import type { StorePurchaseScanResponse } from '@/lib/api';
 import { backendRequest } from '@/lib/server-backend';
+import { readJsonObject } from '@/lib/request-security';
 import {
   getMerchantContext,
   isSameOriginRequest,
   MerchantAccessError,
   merchantErrorResponse,
 } from '@/lib/server-merchant';
-
-type ScanBody = {
-  qrContent?: unknown;
-};
 
 export async function POST(request: Request) {
   if (!isSameOriginRequest(request)) {
@@ -20,7 +17,7 @@ export async function POST(request: Request) {
 
   try {
     const { session, token } = await getMerchantContext();
-    const body = (await request.json()) as ScanBody;
+    const body = await readJsonObject(request);
     const qrContent = typeof body.qrContent === 'string' ? body.qrContent.trim() : '';
 
     if (!qrContent) {

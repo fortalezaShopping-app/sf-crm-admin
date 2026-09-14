@@ -117,11 +117,22 @@ const server = https.createServer(
       return json({ ok: true });
     }
     if (path === '/__requests') return json(requests);
+    if (path === '/__profile' && req.method === 'POST') {
+      profile = body;
+      return json({ ok: true });
+    }
     if (path === '/__merchant') {
       profile = { ...profile, roles: ['STORE_USER'], storeId: 1 };
       return json({ ok: true });
     }
     requests.push({ path, method: req.method, body });
+    if (path === '/api/auth/admin/login' || path === '/api/auth/login') {
+      if (body?.password !== 'test-password') return json({ message: 'Credenciais invalidas.' }, 401);
+      if (path === '/api/auth/admin/login' && !profile.roles?.includes('ADMIN')) return json({}, 403);
+      const token = `local.${Buffer.from(JSON.stringify({ sub: String(profile.id), role: profile.roles?.[0], exp: Math.floor(Date.now() / 1000) + 3600 })).toString('base64url')}.test`;
+      return json({ token, ...profile });
+    }
+    if (req.headers.authorization === 'Bearer invalid-token') return json({}, 401);
     if (path === '/api/auth/profile') {
       if (req.method === 'PUT') profile = { ...profile, ...body };
       return json(profile);
@@ -156,6 +167,16 @@ const server = https.createServer(
     if (path === '/api/admin/loyalty/transactions') return page([]);
     if (path === '/api/public/stores/1')
       return json({ id: 1, name: 'Centro Óptico', status: 'ACTIVE' });
+    if (path === '/api/admin/stores/1/image') {
+      res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
+      return res.end('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="#8a2c1f"/><script>document.documentElement.setAttribute("data-script-executed", "yes")</script></svg>');
+    }
+    if (path === '/api/store/purchases/scan') {
+      return json({ purchaseId: 'test-purchase', storeId: body.storeId, status: 'PENDING', customerName: 'Cliente de teste' });
+    }
+    if (path === '/api/store/purchases/test-purchase/confirm') {
+      return json({ id: 'test-purchase', storeId: profile.storeId, amount: body.amount, status: 'CONFIRMED', points: 12 });
+    }
     if (path === '/api/admin/stores')
       return page([
         { id: 1, name: 'Centro Óptico', status: 'ACTIVE' },
@@ -258,6 +279,7 @@ server.listen(4443, '127.0.0.1', () => {
         ...process.env,
         NEXT_DIST_DIR: '.next-e2e',
         NEXT_PUBLIC_API_URL: 'https://127.0.0.1:4443',
+        SF_MERCHANT_STORE_MAP: '{"id:1234":7}',
         NODE_EXTRA_CA_CERTS: cert,
       },
     },

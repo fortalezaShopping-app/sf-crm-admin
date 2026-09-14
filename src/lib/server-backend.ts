@@ -9,7 +9,6 @@ import {
   isTokenExpired,
   normalizeAuthRole,
 } from '@/lib/admin-session';
-import type { AuthRole } from '@/lib/admin-session';
 import type { LoginEmailRequest, LoginResponse } from '@/lib/api';
 import { getApiBaseUrl } from '@/lib/env';
 import { getTemporaryMerchantStoreId } from '@/lib/server-merchant-store-map';
@@ -62,37 +61,7 @@ export async function authenticateBackoffice(credentials: LoginEmailRequest) {
     throw new BackendApiError('A API respondeu sem token.', 502, login);
   }
 
-  const temporaryStoreId = loginPath.endsWith('/admin/login')
-    ? undefined
-    : getTemporaryMerchantStoreId({
-        email: login.email ?? credentials.email,
-        id: login.id,
-      });
-  const explicitRole = normalizeAuthRole(login.role) ?? getTokenRole(token);
-  const role = explicitRole ??
-    (temporaryStoreId
-      ? 'STORE_USER'
-      : loginPath.endsWith('/admin/login')
-        ? 'ADMIN'
-        : 'CUSTOMER');
-
-  if (!isBackofficeRole(role)) {
-    throw new BackendApiError(
-      'Esta area e reservada a administradores e lojistas.',
-      403,
-      login,
-    );
-  }
-
-  const session = await resolveAdminSession(
-    token,
-    {
-      ...login,
-      storeId: login.storeId ?? temporaryStoreId,
-    },
-    credentials.email,
-    role,
-  );
+  const session = await resolveAdminSession(token, login);
   return { session, token };
 }
 
@@ -101,29 +70,27 @@ export const authenticateAdmin = authenticateBackoffice;
 export async function resolveAdminSession(
   token: string,
   login: LoginResponse = {},
-  fallbackEmail?: string,
-  roleHint?: AuthRole | null,
 ): Promise<AdminSession> {
   if (isTokenExpired(token)) {
     throw new BackendApiError('A sessao expirou. Inicie sessao novamente.', 401, null);
   }
 
   const profile = await backendRequest<AuthenticatedProfile>('/api/auth/profile', { token });
+  const email = profile.email ?? login.email;
+  const id = profile.id ?? login.id;
+  const temporaryStoreId = getTemporaryMerchantStoreId({ email, id });
   const role = getProfileRole(profile) ??
     normalizeAuthRole(login.role) ??
     getTokenRole(token) ??
-    roleHint ??
-    'ADMIN';
+    (temporaryStoreId ? 'STORE_USER' : null);
 
   if (!isBackofficeRole(role)) {
     throw new BackendApiError('A conta nao tem acesso ao painel de gestao.', 403, profile);
   }
 
-  const email = profile.email ?? login.email ?? fallbackEmail;
-  const id = profile.id ?? login.id;
   const storeId = toPositiveInteger(profile.storeId) ??
     getTokenStoreId(token) ??
-    (role === 'STORE_USER' ? getTemporaryMerchantStoreId({ email, id }) : undefined) ??
+    (role === 'STORE_USER' ? temporaryStoreId : undefined) ??
     toPositiveInteger(login.storeId);
 
   if (role === 'STORE_USER' && !storeId) {
@@ -156,7 +123,7 @@ function getLoginToken(login: LoginResponse) {
 }
 
 function getProfileRole(profile: AuthenticatedProfile) {
-  const candidates = [profile.role, ...(profile.roles ?? [])];
+  const candidates = [profile.role, ...(Array.isArray(profile.roles) ? profile.roles : [])];
 
   for (const candidate of candidates) {
     const role = normalizeAuthRole(candidate);
@@ -200,6 +167,7 @@ export async function backendRequest<T>(
       body: requestBody,
       cache: 'no-store',
       headers: requestHeaders,
+      redirect: 'error',
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch (error) {

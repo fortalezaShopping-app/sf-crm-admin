@@ -2,16 +2,13 @@ import { NextResponse } from 'next/server';
 
 import type { StorePurchaseResponse } from '@/lib/api';
 import { backendRequest } from '@/lib/server-backend';
+import { readJsonObject } from '@/lib/request-security';
 import {
   getMerchantContext,
   isSameOriginRequest,
   MerchantAccessError,
   merchantErrorResponse,
 } from '@/lib/server-merchant';
-
-type ConfirmBody = {
-  amount?: unknown;
-};
 
 type ConfirmContext = {
   params: Promise<{
@@ -27,10 +24,10 @@ export async function POST(request: Request, context: ConfirmContext) {
   try {
     const { session, token } = await getMerchantContext();
     const { purchaseId } = await context.params;
-    const body = (await request.json()) as ConfirmBody;
-    const amount = typeof body.amount === 'number' ? body.amount : Number(body.amount);
+    const body = await readJsonObject(request);
+    const amount = typeof body.amount === 'number' ? body.amount : NaN;
 
-    if (!purchaseId || !Number.isFinite(amount) || amount < 0.01) {
+    if (!/^[a-zA-Z0-9_-]{1,128}$/.test(purchaseId) || !Number.isFinite(amount) || amount < 0.01) {
       return NextResponse.json(
         { message: 'O valor da compra e invalido.' },
         { status: 400 },

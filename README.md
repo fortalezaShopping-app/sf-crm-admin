@@ -36,13 +36,36 @@ lojas. A variavel e exclusiva do servidor e nao deve usar o prefixo `NEXT_PUBLIC
 Dados reais recebidos da API/JWT tem prioridade sobre esta lista. Depois de alterar
 a configuracao, o lojista deve iniciar uma nova sessao.
 
-As associacoes temporarias confirmadas para os testes atuais sao:
+Nao existem associacoes de teste implicitas. Antes de atualizar um ambiente que
+dependia dos antigos defaults, configure explicitamente os vinculos autorizados
+em `SF_MERCHANT_STORE_MAP`. Prefira IDs imutaveis a emails editaveis.
+Uma conta sem funcao reconhecida nao recebe permissoes administrativas e um
+lojista sem loja nao consegue registar compras.
 
-- `afriteste@teste.com` / utilizador `8`: Africell, loja `9`;
-- `calvin@teste.com` / utilizador `9`: Calvin Klein, loja `64`.
+## Seguranca e validacao
 
-Entradas em `SF_MERCHANT_STORE_MAP` substituem estes defaults quando usam a mesma
-chave.
+Use Node.js 24 para os testes locais e `npm ci` para instalar o lockfile validado.
+
+```bash
+npm run audit
+npm run lint
+npm run typecheck
+npm test
+npm run test:e2e
+npm run build
+```
+
+Os testes E2E usam uma API HTTPS local simulada, sem credenciais nem alteracoes
+em producao. Precisam de OpenSSL, Chromium do Playwright e portas 3103/4443 livres.
+Na primeira execucao, instale o navegador com `npx playwright install chromium`.
+
+O painel verifica a sessao junto da API e nao usa cookies de funcao/loja para
+autorizar pedidos. Alteracoes exigem evidencia de mesma origem; clientes de teste
+HTTP devem enviar o cabecalho `Origin` correspondente ao endereco do painel.
+Os pedidos de login/QR aceitam ate 16 KiB e o proxy ate 25 MiB por pedido completo.
+
+Consulte [Seguranca do painel](docs/seguranca.md) para limites e verificacoes de
+deploy. Uma auditoria npm limpa nao substitui a validacao de permissoes na API.
 
 ## Estrutura
 
@@ -91,5 +114,6 @@ VOGA usam temporariamente a fotografia principal no endpoint de logo porque nao
 ha logotipo isolado nos assets. Terrincha Maison e Tabacaria Executiva usam uma
 imagem principal neutra gerada a partir do logotipo disponivel.
 
-Os antigos ecras de recompensas, regras, configuracoes e auditoria foram retirados da
-navegacao porque a API v1 nao expoe endpoints administrativos para esses recursos.
+As telas de recompensas e definicoes ja estao disponiveis. Operacoes ainda nao
+documentadas na API permanecem preparadas, sem gravacao simulada. As pendencias
+estao em `docs/pendencias-api-backend.txt`.

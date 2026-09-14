@@ -10,7 +10,8 @@
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "typecheck": "tsc --noEmit --incremental false",
-    "test": "node --experimental-strip-types --test tests/admin-models.test.mjs",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "audit": "npm audit --audit-level=moderate",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -18,7 +19,7 @@
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "lucide-react": "1.23.0",
-    "next": "16.2.10",
+    "next": "16.3.5",
     "radix-ui": "1.6.7",
     "react": "19.2.7",
     "react-dom": "19.2.7",
@@ -32,7 +33,7 @@
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "eslint": "9.39.4",
-    "eslint-config-next": "16.2.10",
+    "eslint-config-next": "16.3.5",
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3"
   }

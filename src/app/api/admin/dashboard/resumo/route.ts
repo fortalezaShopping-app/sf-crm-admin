@@ -5,7 +5,7 @@ import type {
   Loja,
 } from '@/lib/api';
 import { backendRequest, BackendApiError } from '@/lib/server-backend';
-import { getAdminToken } from '@/lib/server-auth';
+import { getAdminToken, getAuthenticatedBackofficeSession } from '@/lib/server-auth';
 
 const SUMMARY_FETCH_SIZE = 1000;
 const DASHBOARD_PERIOD_DAYS = 30;
@@ -58,6 +58,14 @@ export async function GET() {
     return NextResponse.json({ message: 'Sessao expirada.' }, { status: 401 });
   }
 
+  const session = await getAuthenticatedBackofficeSession();
+  if (!session) {
+    return NextResponse.json({ message: 'Sessao expirada.' }, { status: 401 });
+  }
+  if (session.role !== 'ADMIN' && session.role !== 'MANAGER') {
+    return NextResponse.json({ message: 'Acesso reservado a administradores e gestores.' }, { status: 403 });
+  }
+
   try {
     const [
       storesData,
@@ -70,7 +78,7 @@ export async function GET() {
       transactions,
     ] = await Promise.all([
       backendRequest<StorePage>(`/api/admin/stores?page=0&size=${SUMMARY_FETCH_SIZE}`, { token }),
-      getUsersOrEmpty('/api/admin/users', token),
+      getUsersTotal(token),
       getPageOrEmpty<AdminInvoiceResponse>(
         `/api/admin/invoices?page=0&size=${SUMMARY_FETCH_SIZE}&sort=invoiceDate,desc`,
         token,
@@ -112,13 +120,13 @@ export async function GET() {
       },
       rewardsTotal: getPageTotal(rewards),
       topStores: getTopStores(invoices.content ?? [], stores),
-      usersTotal: users.length,
+      usersTotal: users,
       volumeByPeriod: createVolumeSeries(transactions.content ?? []),
     };
 
     return NextResponse.json(summary, {
       headers: {
-        'Cache-Control': 'private, max-age=15, stale-while-revalidate=30',
+        'Cache-Control': 'private, no-store',
       },
     });
   } catch (error) {
@@ -153,16 +161,18 @@ async function getPageOrEmpty<T>(path: string, token: string): Promise<PageRespo
   }
 }
 
-async function getUsersOrEmpty(path: string, token: string) {
+async function getUsersTotal(token: string) {
   try {
-    const users = await backendRequest<UserResponse[]>(path, { token });
-    return Array.isArray(users) ? users : [];
+    const users = await backendRequest<UserResponse[] | PageResponse<UserResponse>>(
+      '/api/admin/users?page=0&size=1', { token },
+    );
+    return Array.isArray(users) ? users.length : getPageTotal(users);
   } catch (error) {
     if (
       error instanceof BackendApiError &&
       (error.status === 401 || error.status === 403)
     ) {
-      return [];
+      return 0;
     }
 
     throw error;
