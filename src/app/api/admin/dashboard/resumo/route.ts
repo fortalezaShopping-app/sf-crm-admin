@@ -58,15 +58,15 @@ export async function GET() {
     return NextResponse.json({ message: 'Sessao expirada.' }, { status: 401 });
   }
 
-  const session = await getAuthenticatedBackofficeSession();
-  if (!session) {
-    return NextResponse.json({ message: 'Sessao expirada.' }, { status: 401 });
-  }
-  if (session.role !== 'ADMIN' && session.role !== 'MANAGER') {
-    return NextResponse.json({ message: 'Acesso reservado a administradores e gestores.' }, { status: 403 });
-  }
-
   try {
+    const session = await getAuthenticatedBackofficeSession();
+    if (!session) {
+      return NextResponse.json({ message: 'Sessao expirada.' }, { status: 401 });
+    }
+    if (session.role !== 'ADMIN' && session.role !== 'MANAGER') {
+      return NextResponse.json({ message: 'Acesso reservado a administradores e gestores.' }, { status: 403 });
+    }
+
     const [
       storesData,
       users,

@@ -24,7 +24,7 @@ servidor.
 
 ### Associacao temporaria de lojistas
 
-Enquanto a API nao devolver `storeId` no login, perfil ou JWT, o servidor do painel
+Enquanto a API nao devolver `storeId` no perfil ou JWT, o servidor do painel
 pode resolver a loja de contas `STORE_USER` por uma lista temporaria:
 
 ```bash
@@ -63,6 +63,14 @@ O painel verifica a sessao junto da API e nao usa cookies de funcao/loja para
 autorizar pedidos. Alteracoes exigem evidencia de mesma origem; clientes de teste
 HTTP devem enviar o cabecalho `Origin` correspondente ao endereco do painel.
 Os pedidos de login/QR aceitam ate 16 KiB e o proxy ate 25 MiB por pedido completo.
+
+Login e pedidos seguintes usam a mesma verificacao. Quando o perfil e o JWT nao
+incluem a funcao, o servidor consulta `/api/admin/users/{id}` apenas para o ID
+devolvido pelo perfil autenticado. Dados presentes apenas na resposta do login
+nao servem de permissao temporaria. Falhas de rede, limites de pedidos e erros
+temporarios da API devolvem 503 sem apagar a sessao; a pagina permite tentar
+novamente. Expiracao, revogacao e recusa de acesso continuam a bloquear a conta.
+O painel nao prolonga tokens: o contrato atual nao disponibiliza renovacao.
 
 Consulte [Seguranca do painel](docs/seguranca.md) para limites e verificacoes de
 deploy. Uma auditoria npm limpa nao substitui a validacao de permissoes na API.

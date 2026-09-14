@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 
 import { ADMIN_TOKEN_COOKIE, BACKOFFICE_ROLE_COOKIE, BACKOFFICE_STORE_COOKIE } from '@/lib/admin-session';
 import { getApiBaseUrl } from '@/lib/env';
-import { resolveAdminSession } from '@/lib/server-backend';
-import { getAdminToken, getAuthenticatedBackofficeSession } from '@/lib/server-auth';
+import { BackendApiError } from '@/lib/server-backend';
+import { getAdminToken, getAuthenticatedBackofficeSession, validateBackofficeToken } from '@/lib/server-auth';
 import { canProxyRequest, getProxyTargetUrl, isSameOriginRequest, MAX_PROXY_BODY_BYTES, readRequestBody, RequestInputError } from '@/lib/request-security';
 
 type ProxyContext = {
@@ -74,7 +74,7 @@ async function proxyRequest(request: Request, context: ProxyContext) {
     });
 
     const sessionIsValid = response.status === 401
-      ? await canResolveAdminSession(token)
+      ? Boolean(await validateBackofficeToken(token))
       : true;
 
     if (response.status === 401 && sessionIsValid) {
@@ -98,22 +98,13 @@ async function proxyRequest(request: Request, context: ProxyContext) {
 
     return proxyResponse;
   } catch (error) {
-    if (error instanceof RequestInputError) {
+    if (error instanceof RequestInputError || error instanceof BackendApiError) {
       return NextResponse.json({ message: error.message }, { status: error.status });
     }
     return Response.json(
       { message: 'Falha ao contactar a API.' },
       { status: 502 },
     );
-  }
-}
-
-async function canResolveAdminSession(token: string) {
-  try {
-    await resolveAdminSession(token);
-    return true;
-  } catch {
-    return false;
   }
 }
 

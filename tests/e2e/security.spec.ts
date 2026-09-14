@@ -102,7 +102,7 @@ test('role cookies cannot grant privileges to accounts without a backend role', 
   const page = await context.request.get('/dashboard', { maxRedirects: 0 });
   expect(page.headers().location).toBe('/login');
   const calls = await (await backend.get('/__requests')).json();
-  expect(calls.every((call: { path: string }) => call.path === '/api/auth/profile')).toBe(true);
+  expect(calls.every((call: { path: string }) => ['/api/auth/profile', '/api/admin/users/100'].includes(call.path))).toBe(true);
 });
 
 test('legacy store cookies signed with the known token cannot assign another store', async ({ context, backend }) => {

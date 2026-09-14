@@ -20,9 +20,16 @@ Revisao local: 14/09/2026. Escopo: `sf-admin`, sem alteracoes na API, VPS ou mob
 - Sessao confirmada no backend; cookies antigos de funcao/loja nao autorizam
   operacoes. Nao existe fallback automatico para ADMIN. O proxy e o resumo do
   dashboard verificam a funcao antes de consultar recursos administrativos.
-- Apenas perfil/JWT verificados pela API ou mapeamento explicito no servidor
-  determinam a loja. O login pode consumir os campos da resposta autenticada,
-  mas pedidos posteriores precisam de perfil/JWT ou mapeamento disponivel.
+- Login e pedidos seguintes usam a mesma verificacao, sem depender de permissoes
+  presentes apenas na resposta do login. Quando perfil/JWT omitem a funcao,
+  consulta-se `/api/admin/users/{id}` apenas para o ID do perfil autenticado,
+  confirmando a identidade devolvida e recusando contas inativas.
+- Apenas dados autenticados da API/JWT ou mapeamento explicito no servidor
+  determinam a loja. Cookies antigos de funcao/loja continuam sem autoridade.
+- Falhas temporarias ao confirmar a sessao devolvem 503, nao 401, preservando o
+  cookie sem permitir a operacao. A pagina permite tentar novamente. Expiracao,
+  revogacao e recusa de acesso continuam a impedir pedidos; nao ha renovacao
+  automatica de tokens sem suporte da API.
 - Caminhos ambiguos e redirecionamentos do backend sao rejeitados pelo proxy.
 - Limites de tamanho: 16 KiB para login/QR e 25 MiB para o pedido completo no proxy.
   Dados invalidos devolvem 400/415; pedidos demasiado grandes devolvem 413.
@@ -32,13 +39,15 @@ Revisao local: 14/09/2026. Escopo: `sf-admin`, sem alteracoes na API, VPS ou mob
 
 1. Configurar `SF_MERCHANT_STORE_MAP` somente para contas cujo vinculo nao vem da
    API. Nao ha vinculos implicitos de contas de teste. Preferir IDs imutaveis;
-   remover entradas obsoletas. Confirmar a funcao e loja no perfil/JWT.
+   remover entradas obsoletas. Confirmar a funcao e loja nos dados autenticados.
 2. Executar os comandos de validacao no README. Publicar o lockfile com o codigo.
 3. Confirmar HTTPS, cookies Secure/HttpOnly/SameSite e preservacao dos cabecalhos
    no dominio real, atras do proxy utilizado no deploy. O HSTS aplica-se apenas
    ao host do painel, sem incluir automaticamente subdominios.
 4. Testar login de administrador/gestor/lojista, QR com camera, upload real e
    recuperacao de palavra-passe num ambiente autorizado de homologacao.
+   Confirmar tambem navegacao, recarregamento e nova aba apos o login, bem como
+   recuperacao de indisponibilidade temporaria da API sem logout.
 5. Confirmar que `/_next/image` devolve 404 e que os cabecalhos de seguranca
    permanecem presentes apos o deploy.
 
@@ -67,9 +76,17 @@ credito de pontos, configuracao do proxy ou ausencia de vulnerabilidades em prod
 - `npm run audit` e `npm audit --omit=dev`: zero vulnerabilidades reportadas.
 - `npm run lint`, `npm run typecheck` e `npm run build`: aprovados.
 - `npm test`: 9 testes aprovados.
-- `npm run test:e2e`: 30 testes aprovados, incluindo telas a 1440/390 px,
+- `npm run test:e2e`: 39 testes aprovados, incluindo telas a 1440/390 px,
   isolamento de lojistas, cookies adulterados, formularios, origem dos pedidos,
-  limites de entrada e bloqueio de scripts em SVG aberto diretamente.
+  limites de entrada e bloqueio de scripts em SVG aberto diretamente. Os 9 testes
+  de sessao cobrem login sem funcao no perfil/JWT, navegacao/reload/nova aba,
+  recuperacao de falhas temporarias e verificacao inconclusiva de um 401,
+  identidade/permissoes, revogacao e expiracao real.
+- A regressao de sessao foi reproduzida antes da correcao com API simulada:
+  login 200 seguido de 401, e indisponibilidade 503 convertida em logout.
+  A correcao foi validada sem chamadas autenticadas nem alteracoes em producao.
+  Build repetido com `NEXT_DIST_DIR=.next-build npm run build`, sem interferir
+  com o servidor de desenvolvimento existente.
 - Build de producao executado apenas localmente: login 200; HSTS e protecao contra
   enquadramento presentes; otimizador 404; resumo sem sessao 401; API com no-store e
   sandbox; alteracao de outra origem 403.

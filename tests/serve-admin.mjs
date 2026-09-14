@@ -32,7 +32,10 @@ const generated = spawnSync(
 if (generated.status !== 0)
   throw new Error('OpenSSL is required for the isolated HTTPS test API.');
 let users, profile, notifications, invoices, highlights, validations, requests;
+let sessionBehavior, profileRequests;
 function reset() {
+  sessionBehavior = {};
+  profileRequests = 0;
   const date = new Date().toISOString();
   users = Array.from({ length: 12 }, (_, i) => ({
     id: i + 1,
@@ -117,6 +120,11 @@ const server = https.createServer(
       return json({ ok: true });
     }
     if (path === '/__requests') return json(requests);
+    if (path === '/__session-behavior' && req.method === 'POST') {
+      sessionBehavior = body;
+      profileRequests = 0;
+      return json({ ok: true });
+    }
     if (path === '/__profile' && req.method === 'POST') {
       profile = body;
       return json({ ok: true });
@@ -129,13 +137,22 @@ const server = https.createServer(
     if (path === '/api/auth/admin/login' || path === '/api/auth/login') {
       if (body?.password !== 'test-password') return json({ message: 'Credenciais invalidas.' }, 401);
       if (path === '/api/auth/admin/login' && !profile.roles?.includes('ADMIN')) return json({}, 403);
-      const token = `local.${Buffer.from(JSON.stringify({ sub: String(profile.id), role: profile.roles?.[0], exp: Math.floor(Date.now() / 1000) + 3600 })).toString('base64url')}.test`;
-      return json({ token, ...profile });
+      const token = `local.${Buffer.from(JSON.stringify({ sub: String(profile.id), role: sessionBehavior.hideTokenRole ? undefined : profile.roles?.[0], exp: Math.floor(Date.now() / 1000) + 3600 })).toString('base64url')}.test`;
+      return json({ token, ...profile, role: profile.roles?.[0] });
     }
     if (req.headers.authorization === 'Bearer invalid-token') return json({}, 401);
     if (path === '/api/auth/profile') {
+      profileRequests += 1;
+      if (sessionBehavior.profileStatus && profileRequests > (sessionBehavior.failProfileAfter ?? 0)) {
+        return json({ message: 'API temporariamente indisponivel.' }, sessionBehavior.profileStatus);
+      }
       if (req.method === 'PUT') profile = { ...profile, ...body };
-      return json(profile);
+      return json(sessionBehavior.hideProfileRole ? { ...profile, role: undefined, roles: undefined } : profile);
+    }
+    if (path === sessionBehavior.resourceUnauthorized) return json({}, 401);
+    if (req.method === 'GET' && path === `/api/admin/users/${profile.id}`) {
+      if (sessionBehavior.selfUserStatus) return json({}, sessionBehavior.selfUserStatus);
+      return json(sessionBehavior.selfUserMismatch ? { ...profile, id: profile.id + 1 } : profile);
     }
     if (path === '/api/admin/users') {
       if (req.method === 'POST') {

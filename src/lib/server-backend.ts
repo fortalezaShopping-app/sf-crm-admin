@@ -21,6 +21,7 @@ type AuthenticatedProfile = {
   name?: string;
   role?: string;
   roles?: string[];
+  status?: string;
   storeId?: number;
 };
 
@@ -61,37 +62,38 @@ export async function authenticateBackoffice(credentials: LoginEmailRequest) {
     throw new BackendApiError('A API respondeu sem token.', 502, login);
   }
 
-  const session = await resolveAdminSession(token, login);
+  const session = await resolveAdminSession(token);
   return { session, token };
 }
 
 export const authenticateAdmin = authenticateBackoffice;
 
-export async function resolveAdminSession(
-  token: string,
-  login: LoginResponse = {},
-): Promise<AdminSession> {
+export async function resolveAdminSession(token: string): Promise<AdminSession> {
   if (isTokenExpired(token)) {
     throw new BackendApiError('A sessao expirou. Inicie sessao novamente.', 401, null);
   }
 
   const profile = await backendRequest<AuthenticatedProfile>('/api/auth/profile', { token });
-  const email = profile.email ?? login.email;
-  const id = profile.id ?? login.id;
-  const temporaryStoreId = getTemporaryMerchantStoreId({ email, id });
-  const role = getProfileRole(profile) ??
-    normalizeAuthRole(login.role) ??
-    getTokenRole(token) ??
+  assertActiveAccount(profile);
+  const email = profile.email;
+  const id = toPositiveInteger(profile.id);
+  const profileRole = getProfileRole(profile) ?? getTokenRole(token);
+  // UserResponse omits roles; AdminUserResponse exposes them for the authenticated ID.
+  const account = !profileRole && id ? await getAuthenticatedAccount(id, token) : null;
+  const confirmedRole = profileRole ?? (account ? getProfileRole(account) : null);
+  const assignedStoreId = toPositiveInteger(profile.storeId) ??
+    getTokenStoreId(token) ?? toPositiveInteger(account?.storeId);
+  const temporaryStoreId = !assignedStoreId && (!confirmedRole || confirmedRole === 'STORE_USER')
+    ? getTemporaryMerchantStoreId({ email, id })
+    : undefined;
+  const role = confirmedRole ??
     (temporaryStoreId ? 'STORE_USER' : null);
 
   if (!isBackofficeRole(role)) {
     throw new BackendApiError('A conta nao tem acesso ao painel de gestao.', 403, profile);
   }
 
-  const storeId = toPositiveInteger(profile.storeId) ??
-    getTokenStoreId(token) ??
-    (role === 'STORE_USER' ? temporaryStoreId : undefined) ??
-    toPositiveInteger(login.storeId);
+  const storeId = assignedStoreId ?? (role === 'STORE_USER' ? temporaryStoreId : undefined);
 
   if (role === 'STORE_USER' && !storeId) {
     throw new BackendApiError(
@@ -105,10 +107,34 @@ export async function resolveAdminSession(
     email,
     expiresAt: getTokenExpiresAt(token),
     id,
-    nome: profile.name ?? login.name,
+    nome: profile.name,
     role,
     storeId,
   };
+}
+
+async function getAuthenticatedAccount(id: number, token: string) {
+  let account: AuthenticatedProfile;
+  try {
+    account = await backendRequest<AuthenticatedProfile>(`/api/admin/users/${id}`, { token });
+  } catch (error) {
+    if (error instanceof BackendApiError && [401, 403, 404].includes(error.status)) {
+      return null;
+    }
+    throw error;
+  }
+
+  if (toPositiveInteger(account.id) !== id) {
+    throw new BackendApiError('Nao foi possivel confirmar a identidade da conta.', 403, null);
+  }
+  assertActiveAccount(account);
+  return account;
+}
+
+function assertActiveAccount(profile: AuthenticatedProfile) {
+  if (['INACTIVE', 'DISABLED', 'BLOCKED', 'SUSPENDED'].includes(profile.status?.toUpperCase() ?? '')) {
+    throw new BackendApiError('A conta nao tem acesso ao painel de gestao.', 403, null);
+  }
 }
 
 function requestLogin(path: string, credentials: LoginEmailRequest) {

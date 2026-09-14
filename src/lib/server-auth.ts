@@ -7,7 +7,7 @@ import {
   ADMIN_TOKEN_COOKIE,
   isTokenExpired,
 } from '@/lib/admin-session';
-import { resolveAdminSession } from '@/lib/server-backend';
+import { BackendApiError, resolveAdminSession } from '@/lib/server-backend';
 
 export async function getAdminToken() {
   const token = (await cookies()).get(ADMIN_TOKEN_COOKIE)?.value;
@@ -27,12 +27,24 @@ export const getAuthenticatedAdminSession = cache(async () => {
     return null;
   }
 
-  try {
-    // Cookies supplied by the browser are never a source of permissions or store ownership.
-    return await resolveAdminSession(token);
-  } catch {
-    return null;
-  }
+  // Cookies supplied by the browser are never a source of permissions or store ownership.
+  return validateBackofficeToken(token);
 });
 
 export const getAuthenticatedBackofficeSession = getAuthenticatedAdminSession;
+
+export async function validateBackofficeToken(token: string) {
+  try {
+    return await resolveAdminSession(token);
+  } catch (error) {
+    if (error instanceof BackendApiError && [401, 403].includes(error.status)) {
+      return null;
+    }
+    // A timeout, rate limit or server failure is not evidence of an invalid session.
+    throw new BackendApiError(
+      'Nao foi possivel confirmar a sessao. Tente novamente dentro de instantes.',
+      503,
+      null,
+    );
+  }
+}

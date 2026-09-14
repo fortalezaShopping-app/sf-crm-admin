@@ -101,7 +101,10 @@ PRIORIDADE 2 - COMPLETAR OS DADOS E FLUXOS DAS TELAS
   de forma atomica e idempotente. Verificar a resposta no frontend nao desfaz
   uma compra indevida. Nao existe consulta de compra pendente no contrato atual.
 - O painel deixou de confiar em cookies de funcao/loja e de assumir ADMIN quando
-  a funcao falta. Perfil/JWT devem permitir reconstruir a sessao apos o login.
+  a funcao falta. Quando perfil/JWT omitem a funcao, o painel consulta a propria
+  conta em GET /api/admin/users/{id}, que ja documenta roles. Ainda e importante
+  documentar esses campos no perfil para todos os perfis de acesso, incluindo
+  lojistas sem permissao de consultar a rota administrativa.
 
 COMPLEMENTOS PARA O PROJETO
 
