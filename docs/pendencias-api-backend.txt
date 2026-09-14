@@ -1,0 +1,134 @@
+SHOPPING FORTALEZA - PENDENCIAS PARA A EQUIPA DO BACKEND
+Verificacao: 13/09/2026
+Contrato: https://api.appshoppingfortaleza.ao/api-docs
+Aplicacoes: sf-admin (administradores e lojistas) e sf-mobile (clientes).
+
+Esta lista compara o contrato publicado com as necessidades do frontend.
+"Em falta" significa que a operacao ou o campo nao esta documentado no contrato;
+nao significa que foi comprovada a sua ausencia na implementacao interna.
+Os formularios administrativos sem suporte ficaram preparados, sem gravacao.
+
+PRIORIDADE 1 - DESBLOQUEAR FUNCIONALIDADES
+
+1. CAMPANHAS PUSH E DISPOSITIVOS
+- Criar, listar, consultar, editar e cancelar campanhas, com estados definidos.
+- Receber titulo, mensagem, destino dentro da app, publico e data/hora de envio.
+- Permitir envio imediato ou agendado; definir quando uma campanha pode ser editada.
+- Segmentar por todos os clientes, nivel de fidelizacao, comportamento ou loja
+  visitada. Comportamentos do modelo: novo cliente, saldo inferior/superior a 500,
+  mais de 7 dias ausente e nunca ter resgatado pontos.
+- Devolver estimativa de alcance e resultados de envio, distinguindo pedido
+  aceite, entrega confirmada quando disponivel, abertura e falha.
+- Registar/atualizar/remover o Expo Push Token por dispositivo, associado ao
+  utilizador autenticado; suportar varios dispositivos e invalidar tokens expirados.
+- Guardar as notificacoes enviadas no historico consultado pela app.
+- Respeitar preferencias, limites de frequencia, horario e evitar envios duplicados.
+
+2. GESTAO DE RECOMPENSAS
+- Ja existe GET /api/admin/loyalty/rewards. Faltam operacoes administrativas
+  de criacao, edicao, ativacao/desativacao e envio/substituicao da imagem.
+- Incluir nome, descricao, custo em pontos, categoria, loja quando aplicavel,
+  estado, imagem, validade e stock limitado ou ilimitado.
+- Devolver stock disponivel, total de resgates e contagens por estado.
+- Documentar categorias, estados e significado de stock zero/ausente/ilimitado.
+- Garantir stock e saldo consistentes quando varios clientes resgatam em simultaneo.
+
+3. DEFINICOES GLOBAIS
+- Disponibilizar consulta e atualizacao das configuracoes abaixo:
+  * Programa de pontos: conversao AOA/pontos, expiracao e limites dos niveis.
+  * Taloes: prazo de validacao, numero de ressubmissoes e retencao das imagens.
+  * Push: janela horaria e limite de campanhas por utilizador/semana.
+  * QR: validade e limite de leituras/confirmacoes por lojista.
+- Devolver os valores realmente configurados, sem depender de valores do frontend.
+- As regras devem ser aplicadas no backend; os numeros dos modelos visuais
+  precisam de confirmacao do negocio e nao devem ser assumidos como regras atuais.
+
+4. UTILIZADORES, PONTOS E PERMISSOES
+- Devolver saldo, nivel de fidelizacao e historico de movimentos de um cliente
+  selecionado pelo administrador, sem depender da carteira da propria sessao.
+- Permitir ajuste positivo/negativo de pontos, com motivo obrigatorio, operador,
+  data, saldo anterior/posterior e protecao contra repeticao do mesmo pedido.
+- Disponibilizar historico de acessos e alteracoes da conta.
+- Permitir alteracao controlada de funcao/permissoes: o PUT atual so documenta
+  nome, email e telefone. Definir tambem os estados e transicoes de bloqueio/suspensao.
+- Aplicar permissoes no backend e auditar todas as alteracoes sensiveis.
+
+PRIORIDADE 2 - COMPLETAR OS DADOS E FLUXOS DAS TELAS
+
+5. IDENTIFICACAO DA LOJA NAS TRANSACOES E NOTIFICACOES
+- Acrescentar storeId, storeName e referencia ao logotipo quando houver loja.
+- NotificationResponse precisa tambem de publico destinatario, destino interno
+  e identificador do recurso relacionado, para filtros e navegacao.
+- TransactionResponse deve ligar o movimento a compra/fatura/resgate de origem.
+- Documentar sinal dos pontos e tipos de movimento; nao obrigar a app a deduzir
+  a loja ou o sentido do movimento a partir do texto da descricao.
+
+6. TALOES / FATURAS NO ADMIN
+- Completar AdminInvoiceResponse com identificacao do cliente (id, nome e foto),
+  data de registo e resumo de faturas aprovadas do cliente.
+- Incluir data/hora da submissao, origem (manual/OCR/QR) e pontos associados.
+  A data da compra nao substitui a data da submissao.
+- Criar fluxo para solicitar informacao a loja, receber resposta e consultar historico.
+- Manter separadas a confirmacao de compra por QR e a validacao de faturas;
+  documentar quais os estados em que cada acao pode ocorrer.
+
+7. DESTAQUES E CONTEUDO DA APP
+- O CRUD de /api/admin/store-content ja existe. Documentar os valores aceites
+  em status e as regras de publicacao (incluindo publishedAt).
+- ContentResponse tem video, mas nao imagem: disponibilizar upload/substituicao
+  de imagem e respetiva referencia publica para as novidades da app.
+- Disponibilizar gestao e ordenacao de categorias em destaque.
+- O carrossel ja possui CRUD e imagens; nao e necessario recriar essas rotas.
+
+8. PERFIL, 2FA E SESSOES
+- Disponibilizar consulta/gravacao das preferencias: notificacoes de sistema,
+  alertas de SLA e relatorio semanal por email; definir a que utilizadores se aplicam.
+- Listar dispositivos/sessoes, permitir revogacao e consultar historico de acessos.
+- As rotas de setup/ativacao/desativacao de 2FA ja existem. Falta documentar os
+  campos concretos da resposta de setup e do login quando exige segundo fator.
+- O pedido de login ja aceita code; definir respostas para codigo exigido,
+  invalido ou expirado e o procedimento de recuperacao de acesso.
+
+9. VINCULO LOJISTA-LOJA
+- A associacao ja existe em POST /api/admin/stores/{storeId}/users e a criacao
+  de utilizador aceita storeId. Nao e preciso criar outra rota de associacao.
+- Documentar o retorno da funcao e loja vinculada no login/perfil. UserResponse
+  do perfil ainda nao declara esses campos e a resposta de login e generica.
+- Permitir consultar a associacao atual na gestao administrativa.
+- Garantir que leitura de QR e confirmacao de compra usam apenas a loja autorizada
+  da sessao; o lojista nao pode escolher outra loja por manipulacao do pedido.
+
+COMPLEMENTOS PARA O PROJETO
+
+10. DASHBOARD, ANALYTICS E PESQUISAS
+- Ja existem totais globais e listagens de fidelizacao. Completar os agregados
+  por periodo: volume de transacoes, utilizadores ativos, lojas mais ativas,
+  retencao e resgates, com definicao clara de cada indicador.
+- Documentar filtros de pesquisa, estado, loja, cliente e periodo nas listagens
+  aplicaveis, com paginacao/ordenacao e totais depois dos filtros.
+- CSV das listas atuais ja e gerado pelo frontend; nao confundir com uma
+  exportacao global de dados, que precisa de suporte proprio do backend.
+
+11. DADOS PESSOAIS E OPERACOES DE RISCO
+- Disponibilizar pedido de eliminacao da propria conta pelo cliente, com
+  confirmacao de identidade e regras de retencao/anonimizacao definidas.
+- Disponibilizar exportacao global de dados apenas para administradores autorizados.
+- A reposicao global dos pontos aparece no modelo, mas deve depender de aprovacao
+  do negocio, reautenticacao, confirmacao reforcada e auditoria antes de ser ativada.
+
+O QUE JA EXISTE E NAO DEVE SER PEDIDO COMO NOVO
+- Listagem de utilizadores, edicao de contactos e ativacao/desativacao.
+- Associacao de lojistas a lojas e fluxo de compra por QR.
+- Upload, consulta de imagem/OCR e validacao de faturas.
+- Edicao de perfil, fotografia e recuperacao de palavra-passe por codigo.
+- Consulta e marcacao de notificacoes como lidas.
+- CRUD de lojas, eventos, carrossel e conteudos de loja.
+
+ENTREGA ESPERADA DA EQUIPA DO BACKEND
+- Atualizar OpenAPI com rotas, permissoes por funcao, campos obrigatorios,
+  enums, exemplos de pedido/resposta, erros e limites de upload.
+- Para datas, usar ISO 8601 com fuso explicito; o painel apresenta Africa/Luanda
+  (UTC+1). Distinguir data simples de data/hora.
+- Informar o que ja existe mas nao esta documentado e disponibilizar ambiente
+  de testes antes da integracao em producao.
+- Os nomes de novos campos acima sao sugestoes de contrato a alinhar entre equipas.
