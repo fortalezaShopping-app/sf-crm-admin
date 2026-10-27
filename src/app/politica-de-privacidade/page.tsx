@@ -19,8 +19,8 @@ const policySections = [
   {
     bullets: [
       'Dados de conta e perfil: nome, email, telefone e fotografia de perfil.',
-      'Dados de fidelização: faturas, imagens submetidas, dados extraídos por OCR, loja, valor, data, identificadores, pontos e benefícios.',
-      'Dados de utilização: idioma, lojas favoritas, notificações, sessão e informações técnicas necessárias ao funcionamento e à segurança da aplicação.',
+      'Dados de fidelização: faturas, imagens submetidas, dados extraídos por OCR ou pelo QR fiscal, loja, valor, data, identificadores, pontos e benefícios.',
+      'Dados de utilização: idioma, lojas favoritas, notificações, identificador desta instalação, token de notificações push, sessão e informações técnicas necessárias ao funcionamento e à segurança da aplicação.',
     ],
     title: 'Dados que tratamos',
   },
@@ -35,9 +35,15 @@ const policySections = [
   },
   {
     paragraphs: [
-      'A câmara e as fotografias são utilizadas apenas após a sua ação e autorização. Ao fotografar uma fatura, a aplicação pode reconhecer o texto por OCR e enviar a imagem e os dados confirmados para validação e atribuição de pontos.',
+      'A câmara e as fotografias são utilizadas apenas após a sua ação e autorização. Ao fotografar uma fatura, a aplicação reconhece o texto por OCR no dispositivo e, quando a fatura tem QR fiscal, envia a imagem e o conteúdo do QR para leitura automática. A imagem e os dados que confirmar são enviados para validação e atribuição de pontos.',
     ],
     title: 'Câmara, fotografias e OCR',
+  },
+  {
+    paragraphs: [
+      'Com a sua autorização, a aplicação regista o token de notificações push deste dispositivo para enviar avisos sobre a sua conta, pontos, benefícios e novidades do Shopping Fortaleza. O token é removido quando termina a sessão e pode desativar as notificações a qualquer momento nas definições do dispositivo.',
+    ],
+    title: 'Notificações',
   },
   {
     paragraphs: [
@@ -53,9 +59,17 @@ const policySections = [
   },
   {
     paragraphs: [
-      'Pode atualizar os dados do perfil, gerir as permissões da aplicação e solicitar acesso, correção ou eliminação dos seus dados através do contacto abaixo.',
+      'Pode atualizar os dados do perfil, gerir as permissões da aplicação nas definições do dispositivo, eliminar a conta na própria aplicação e solicitar acesso, correção ou eliminação dos seus dados através do contacto abaixo.',
     ],
     title: 'Os seus direitos e escolhas',
+  },
+  {
+    paragraphs: [
+      'Pode eliminar a sua conta a qualquer momento em Perfil > Segurança e Password > Eliminar conta, confirmando com a sua password e, quando estiver ativo, com o código de autenticação em dois passos.',
+      'A eliminação é definitiva: os dados pessoais e os ficheiros associados à conta são removidos e as sessões são terminadas. Os pontos e benefícios por utilizar deixam de estar disponíveis. Os registos contabilísticos do programa de fidelização são conservados de forma pseudonimizada, sem os seus dados de identificação.',
+      'Também pode pedir a eliminação da conta através do contacto indicado nesta política.',
+    ],
+    title: 'Eliminação da conta',
   },
   {
     paragraphs: [
@@ -100,7 +114,7 @@ export default function PrivacyPolicyPage() {
         <header className={styles.intro}>
           <p>Shopping Fortaleza</p>
           <h1>Política de Privacidade</h1>
-          <time dateTime="2026-08-05">Última atualização: 5 de agosto de 2026</time>
+          <time dateTime="2026-10-27">Última atualização: 27 de outubro de 2026</time>
           <p className={styles.lead}>
             Esta Política de Privacidade explica como o Shopping Fortaleza recolhe,
             utiliza, conserva e protege os dados pessoais tratados pelos seus serviços
